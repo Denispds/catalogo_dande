@@ -173,7 +173,7 @@ export default function ProductCard({
         )}
 
         <div
-          className="relative aspect-[4/3] bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer"
+          className="relative aspect-[3/4] bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer"
           onClick={handleImageTap}
         >
           {currentImage && !imgError ? (
@@ -182,7 +182,7 @@ export default function ProductCard({
                 src={currentImage}
                 alt={produto?.nome ?? 'Produto Dande'}
                 fill
-                className={`object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
+                className={`object-contain transition-all duration-700 ease-out ${
                   imgLoaded ? 'opacity-100' : 'opacity-0'
                 }`}
                 onLoad={() => setImgLoaded(true)}
