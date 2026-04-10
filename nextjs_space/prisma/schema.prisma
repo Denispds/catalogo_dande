@@ -1,0 +1,184 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/catalogo_dande/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  role          String    @default("admin")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model CatDepartamento {
+  id        Int       @id @default(autoincrement())
+  nome      String
+  ativo     Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  produtos  CatProduto[]
+
+  @@map("cat_departamentos")
+}
+
+model CatCategoria {
+  id        Int       @id @default(autoincrement())
+  nome      String
+  ativo     Boolean   @default(true)
+  ordem     Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+  produtos  CatProduto[]
+  subcategorias CatSubcategoria[]
+
+  @@map("cat_categorias")
+}
+
+model CatSubcategoria {
+  id          Int       @id @default(autoincrement())
+  nome        String
+  categoriaId Int       @map("categoria_id")
+  ativo       Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  categoria   CatCategoria @relation(fields: [categoriaId], references: [id])
+  produtos    CatProduto[]
+
+  @@map("cat_subcategorias")
+}
+
+model CatProduto {
+  codigo          String   @id
+  nome            String
+  preco           Float
+  precoOriginal   Float?   @map("preco_original")
+  departamentoId  Int      @map("departamento_id")
+  categoriaId     Int      @map("categoria_id")
+  subcategoriaId  Int?     @map("subcategoria_id")
+  badges          String[] @default([])
+  ativo           Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  departamento    CatDepartamento @relation(fields: [departamentoId], references: [id])
+  categoria       CatCategoria    @relation(fields: [categoriaId], references: [id])
+  subcategoria    CatSubcategoria? @relation(fields: [subcategoriaId], references: [id])
+  imagens         CatImagem[]
+  colecaoProdutos CatColecaoProduto[]
+
+  @@index([departamentoId])
+  @@index([categoriaId])
+  @@index([ativo])
+  @@index([nome])
+  @@map("cat_produtos")
+}
+
+model CatImagem {
+  id             String   @id @default(uuid())
+  produtoCodigo  String   @map("produto_codigo")
+  url            String
+  cloudStoragePath String? @map("cloud_storage_path")
+  isPublic       Boolean  @default(true) @map("is_public")
+  principal      Boolean  @default(false)
+  ordem          Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  produto        CatProduto @relation(fields: [produtoCodigo], references: [codigo], onDelete: Cascade)
+
+  @@index([produtoCodigo])
+  @@map("cat_imagens")
+}
+
+model CatColecao {
+  id        String   @id @default(uuid())
+  nome      String
+  descricao String?
+  cor       String   @default("#E91E8C")
+  ativa     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  produtos  CatColecaoProduto[]
+
+  @@map("cat_colecoes")
+}
+
+model CatColecaoProduto {
+  colecaoId     String     @map("colecao_id")
+  produtoCodigo String     @map("produto_codigo")
+  ordem         Int        @default(0)
+
+  colecao       CatColecao @relation(fields: [colecaoId], references: [id], onDelete: Cascade)
+  produto       CatProduto @relation(fields: [produtoCodigo], references: [codigo], onDelete: Cascade)
+
+  @@id([colecaoId, produtoCodigo])
+  @@map("cat_colecao_produtos")
+}
+
+model CatAcao {
+  id        String   @id @default(uuid())
+  titulo    String
+  descricao String?
+  dataInicio DateTime? @map("data_inicio")
+  dataFim    DateTime? @map("data_fim")
+  ativa     Boolean  @default(true)
+  tipo      String   @default("promo")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("cat_acoes")
+}
+
+model CatLancamento {
+  id          String   @id @default(uuid())
+  titulo      String
+  descricao   String?
+  dataPrevista DateTime? @map("data_prevista")
+  status      String   @default("planejado")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("cat_lancamentos")
+}
+
+model CatLink {
+  id        String   @id @default(uuid())
+  titulo    String
+  url       String
+  icone     String?
+  descricao String?
+  ordem     Int      @default(0)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("cat_links")
+}
+
+model CatPagamento {
+  id         String   @id @default(uuid())
+  metodo     String
+  condicao   String?
+  desconto   String?
+  observacao String?
+  ordem      Int      @default(0)
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("cat_pagamentos")
+}
+
+model CatProcedimento {
+  id       String   @id @default(uuid())
+  titulo   String
+  conteudo String?
+  icone    String?
+  ordem    Int      @default(0)
+  ativo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("cat_procedimentos")
+}
