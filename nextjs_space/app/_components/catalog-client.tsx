@@ -5,6 +5,7 @@ import Header from '@/components/header';
 import ProductCard from '@/components/product-card';
 import FilterPanel from '@/components/filter-panel';
 import ShareModal from '@/components/share-modal';
+import ImageLightbox from '@/components/image-lightbox';
 import { Search, ArrowUpDown, ChevronLeft, ChevronRight, Loader2, Package, X, LayoutGrid, List, CheckSquare, XCircle, FileText, Share2 } from 'lucide-react';
 
 const defaultFilters = { departamento: '', categoria: '', subcategoria: '', precoMin: '', precoMax: '', descontoMin: '' };
@@ -37,6 +38,19 @@ export default function CatalogClient() {
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
+
+  // Lightbox state
+  const [lightboxImages, setLightboxImages] = useState<{ url: string }[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const handleImageTap = (produto: any, imageIndex: number) => {
+    const imgs = produto?.imagens ?? [];
+    if (imgs.length === 0) return;
+    setLightboxImages(imgs);
+    setLightboxIndex(imageIndex);
+    setLightboxOpen(true);
+  };
 
   const fetchProdutos = useCallback(async () => {
     setLoading(true);
@@ -345,6 +359,7 @@ ${selected.map((p: any) => {
                 selectionMode={selectionMode}
                 selected={selectedCodes.has(p?.codigo)}
                 onSelect={toggleSelect}
+                onImageTap={handleImageTap}
               />
             ))}
           </div>
@@ -361,6 +376,7 @@ ${selected.map((p: any) => {
                 selectionMode={selectionMode}
                 selected={selectedCodes.has(p?.codigo)}
                 onSelect={toggleSelect}
+                onImageTap={handleImageTap}
               />
             ))}
           </div>
@@ -413,6 +429,13 @@ ${selected.map((p: any) => {
         produto={shareProduct}
         isOpen={!!shareProduct}
         onClose={() => setShareProduct(null)}
+      />
+
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
       />
     </div>
   );
