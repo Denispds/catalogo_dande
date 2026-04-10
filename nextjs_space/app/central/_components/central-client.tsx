@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Header from '@/components/header';
+import CompanyInfo from '@/components/company-info';
+import InstagramFeed from '@/components/instagram-feed';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Rocket, LinkIcon, CreditCard, BookOpen, ChevronDown, ChevronUp, ExternalLink, Clock, Calendar, Loader2 } from 'lucide-react';
 
@@ -45,7 +47,7 @@ export default function CentralClient() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="max-w-[1200px] mx-auto px-4 py-6 space-y-8">
+      <main className="max-w-lg mx-auto px-4 py-6 space-y-8 pb-24">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Central do <span className="text-primary">Vendedor</span></h1>
           <p className="text-sm text-muted-foreground mt-1">Informa\u00e7\u00f5es e ferramentas essenciais</p>
@@ -188,6 +190,15 @@ export default function CentralClient() {
             </div>
           </section>
         )}
+
+        {/* Instagram Feed */}
+        <InstagramFeed />
+
+        {/* Company Info & Social */}
+        <CompanyInfo />
+
+        {/* Spacer for bottom nav */}
+        <div className="h-16" />
       </main>
     </div>
   );
