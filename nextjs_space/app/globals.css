@@ -77,3 +77,7 @@
   .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }
+
+/* Touch optimizations for mobile */
+* { -webkit-tap-highlight-color: transparent; }
+input, select, textarea { font-size: 16px !important; }

@@ -81,7 +81,6 @@ export default function ColecoesClient() {
                               <ProductCard
                                 key={cp?.produto?.codigo ?? cp?.produtoCodigo}
                                 produto={cp?.produto}
-                                layout="grid"
                                 onShare={(p: any) => setShareProduct(p)}
                               />
                             ))}

@@ -17,8 +17,15 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(url.searchParams.get('limit') ?? '12', 10);
     const ativo = url.searchParams.get('ativo');
 
+    const comImagem = url.searchParams.get('comImagem') ?? '';
+
     const where: any = {};
     if (ativo !== 'all') where.ativo = true;
+
+    // Se comImagem=true e NÃO há busca, mostrar apenas produtos com imagem
+    if (comImagem === 'true' && !busca) {
+      where.imagens = { some: {} };
+    }
 
     if (busca) {
       where.OR = [
