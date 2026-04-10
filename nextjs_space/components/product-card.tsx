@@ -9,7 +9,7 @@ interface ProductCardProps {
   onShare?: (produto: any) => void;
   showPrice?: boolean;
   showCode?: boolean;
-  layout?: 'grid' | 'list';
+  layout?: 'grid' | 'single' | 'list';
   selected?: boolean;
   onSelect?: (produto: any) => void;
   selectionMode?: boolean;
@@ -155,7 +155,101 @@ export default function ProductCard({
     );
   }
 
-  // Grid layout
+  // Single layout (1 per row, large card)
+  if (layout === 'single') {
+    return (
+      <div
+        onClick={handleTap}
+        className={`group relative bg-card rounded-2xl overflow-hidden transition-all duration-500 ease-out hover:shadow-xl active:scale-[0.99] ${
+          selected ? 'ring-2 ring-primary shadow-lg shadow-primary/20' : ''
+        }`}
+      >
+        {selectionMode && (
+          <div className={`absolute top-3 left-3 z-10 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
+            selected ? 'bg-primary text-white scale-100' : 'bg-black/30 backdrop-blur-sm scale-90'
+          }`}>
+            {selected && <Check size={16} strokeWidth={3} />}
+          </div>
+        )}
+
+        <div
+          className="relative aspect-[4/3] bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer"
+          onClick={handleImageTap}
+        >
+          {currentImage && !imgError ? (
+            <>
+              <Image
+                src={currentImage}
+                alt={produto?.nome ?? 'Produto Dande'}
+                fill
+                className={`object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
+                  imgLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setImgLoaded(true)}
+                onError={() => setImgError(true)}
+                unoptimized
+              />
+              {!imgLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full border-2 border-pink-200 border-t-pink-500 animate-spin" />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+              <div className="w-14 h-14 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+                <span className="text-2xl">💎</span>
+              </div>
+            </div>
+          )}
+
+          {hasMultipleImages && (
+            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+              {images.map((_: any, i: number) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-300 ${
+                    i === activeImgIdx ? 'w-5 h-2 bg-white shadow-sm' : 'w-2 h-2 bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {onShare && !selectionMode && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onShare?.(produto); }}
+              className="absolute top-3 right-3 w-9 h-9 bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white hover:scale-110 active:scale-95 shadow-md"
+            >
+              <Share2 size={16} className="text-gray-700 dark:text-gray-200" />
+            </button>
+          )}
+        </div>
+
+        {(showPrice || showCode) && (
+          <div className="px-3 py-2">
+            <h3 className="text-xs font-medium leading-tight line-clamp-1 text-muted-foreground mb-0.5">
+              {shortName(produto?.nome)}
+            </h3>
+            <div className="flex items-center justify-between">
+              {showCode && (
+                <span className="text-[10px] font-mono text-muted-foreground/70">
+                  {produto?.codigo}
+                </span>
+              )}
+              {showPrice && (
+                <span className="text-sm font-bold text-primary">
+                  {fmt(produto?.preco ?? 0)}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Grid layout (2 per row)
   return (
     <div
       onClick={handleTap}

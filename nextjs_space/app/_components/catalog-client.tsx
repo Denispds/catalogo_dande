@@ -6,7 +6,7 @@ import ProductCard from '@/components/product-card';
 import FilterPanel from '@/components/filter-panel';
 import ShareModal from '@/components/share-modal';
 import ImageLightbox from '@/components/image-lightbox';
-import { Search, ArrowUpDown, ChevronLeft, ChevronRight, Loader2, Package, X, LayoutGrid, List, CheckSquare, XCircle, FileText, Share2 } from 'lucide-react';
+import { Search, ArrowUpDown, ChevronLeft, ChevronRight, Loader2, Package, X, LayoutGrid, List, Square, CheckSquare, XCircle, FileText, Share2, CheckCheck, EyeOff, Eye } from 'lucide-react';
 
 const defaultFilters = { departamento: '', categoria: '', subcategoria: '', precoMin: '', precoMax: '', descontoMin: '' };
 const ordemOptions = [
@@ -35,9 +35,10 @@ export default function CatalogClient() {
   const searchTimeoutRef = useRef<any>(null);
 
   // Layout & selection state
-  const [layout, setLayout] = useState<'grid' | 'list'>('grid');
+  const [layout, setLayout] = useState<'grid' | 'single' | 'list'>('grid');
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
+  const [hideInfoOnExport, setHideInfoOnExport] = useState(false);
 
   // Lightbox state
   const [lightboxImages, setLightboxImages] = useState<{ url: string }[]>([]);
@@ -131,9 +132,29 @@ export default function CatalogClient() {
     }
   };
 
+  const selectAllOnPage = () => {
+    const codes = new Set(selectedCodes);
+    produtos.forEach((p: any) => { if (p?.codigo) codes.add(p.codigo); });
+    setSelectedCodes(codes);
+  };
+
+  const allPageSelected = produtos.length > 0 && produtos.every((p: any) => selectedCodes.has(p?.codigo));
+
+  const buildCardHtml = (p: any, showInfo: boolean) => {
+    const img = p?.imagens?.[0]?.url;
+    const nome = (p?.nome ?? '').trim().split(/\s+/).slice(0, 2).join(' ');
+    const preco = `R$ ${(p?.preco ?? 0).toFixed(2).replace('.', ',')}`;
+    const imgHtml = img
+      ? `<img src="${img}" alt="${nome}">`
+      : '<div style="aspect-ratio:1;background:#f0e0f0;display:flex;align-items:center;justify-content:center;font-size:32px">💎</div>';
+    if (!showInfo) return `<div class="card">${imgHtml}</div>`;
+    return `<div class="card">${imgHtml}<div class="info"><div class="name">${nome}</div><div class="code">${p?.codigo ?? ''}</div><div class="price">${preco}</div></div></div>`;
+  };
+
   const exportSelected = () => {
     const selected = produtos.filter((p: any) => selectedCodes.has(p?.codigo));
     if (selected.length === 0) return;
+    const showInfo = !hideInfoOnExport;
 
     const html = `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -144,8 +165,8 @@ export default function CatalogClient() {
   h1{text-align:center;color:#E91E8C;margin-bottom:8px;font-size:22px}
   .subtitle{text-align:center;color:#888;font-size:12px;margin-bottom:24px}
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:500px;margin:0 auto}
-  .card{border:1px solid #eee;border-radius:12px;overflow:hidden}
-  .card img{width:100%;aspect-ratio:1;object-fit:cover;background:#f5f5f5}
+  .card{border-radius:12px;overflow:hidden;${showInfo ? 'border:1px solid #eee;' : ''}}
+  .card img{width:100%;aspect-ratio:1;object-fit:cover;background:#f5f5f5;${!showInfo ? 'border-radius:12px;' : ''}}
   .card .info{padding:8px 10px}
   .card .name{font-size:11px;font-weight:600;margin-bottom:2px}
   .card .code{font-size:9px;color:#999;font-family:monospace}
@@ -153,14 +174,9 @@ export default function CatalogClient() {
   @media print{body{padding:10px}.grid{gap:8px}}
 </style></head><body>
 <h1>💎 Dande Acessórios</h1>
-<p class="subtitle">${selected.length} produto(s) selecionado(s)</p>
+<p class="subtitle">${selected.length} produto(s)</p>
 <div class="grid">
-${selected.map((p: any) => {
-  const img = p?.imagens?.[0]?.url;
-  const nome = (p?.nome ?? '').trim().split(/\s+/).slice(0, 2).join(' ');
-  const preco = `R$ ${(p?.preco ?? 0).toFixed(2).replace('.', ',')}`;
-  return `<div class="card">${img ? `<img src="${img}" alt="${nome}">` : '<div style="aspect-ratio:1;background:#f0e0f0;display:flex;align-items:center;justify-content:center;font-size:32px">💎</div>'}<div class="info"><div class="name">${nome}</div><div class="code">${p?.codigo ?? ''}</div><div class="price">${preco}</div></div></div>`;
-}).join('\n')}
+${selected.map((p: any) => buildCardHtml(p, showInfo)).join('\n')}
 </div>
 </body></html>`;
 
@@ -176,6 +192,7 @@ ${selected.map((p: any) => {
   const printSelected = () => {
     const selected = produtos.filter((p: any) => selectedCodes.has(p?.codigo));
     if (selected.length === 0) return;
+    const showInfo = !hideInfoOnExport;
 
     const html = `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8">
@@ -185,8 +202,8 @@ ${selected.map((p: any) => {
   body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:10mm}
   h1{text-align:center;color:#E91E8C;font-size:18px;margin-bottom:4mm}
   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
-  .card{border:1px solid #ddd;border-radius:4mm;overflow:hidden;break-inside:avoid}
-  .card img{width:100%;aspect-ratio:1;object-fit:cover}
+  .card{border-radius:4mm;overflow:hidden;break-inside:avoid;${showInfo ? 'border:1px solid #ddd;' : ''}}
+  .card img{width:100%;aspect-ratio:1;object-fit:cover;${!showInfo ? 'border-radius:4mm;' : ''}}
   .info{padding:2mm 3mm}
   .name{font-size:9px;font-weight:600}
   .code{font-size:8px;color:#999;font-family:monospace}
@@ -194,12 +211,7 @@ ${selected.map((p: any) => {
 </style></head><body>
 <h1>Dande Acessórios</h1>
 <div class="grid">
-${selected.map((p: any) => {
-  const img = p?.imagens?.[0]?.url;
-  const nome = (p?.nome ?? '').trim().split(/\s+/).slice(0, 2).join(' ');
-  const preco = `R$ ${(p?.preco ?? 0).toFixed(2).replace('.', ',')}`;
-  return `<div class="card">${img ? `<img src="${img}">` : ''}<div class="info"><div class="name">${nome}</div><div class="code">${p?.codigo ?? ''}</div><div class="price">${preco}</div></div></div>`;
-}).join('')}
+${selected.map((p: any) => buildCardHtml(p, showInfo)).join('')}
 </div>
 <script>window.onload=()=>{window.print()}<\/script>
 </body></html>`;
@@ -260,16 +272,25 @@ ${selected.map((p: any) => {
             </select>
           </div>
 
-          {/* Layout toggle */}
+          {/* Layout toggle: grid (2/row), single (1/row), list */}
           <div className="flex items-center rounded-2xl bg-card border border-border/50 shadow-sm overflow-hidden">
             <button
               onClick={() => setLayout('grid')}
+              title="2 por linha"
               className={`p-2 transition-all duration-200 ${layout === 'grid' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted/50'}`}
             >
               <LayoutGrid size={14} />
             </button>
             <button
+              onClick={() => setLayout('single')}
+              title="1 por linha"
+              className={`p-2 transition-all duration-200 ${layout === 'single' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted/50'}`}
+            >
+              <Square size={14} />
+            </button>
+            <button
               onClick={() => setLayout('list')}
+              title="Lista"
               className={`p-2 transition-all duration-200 ${layout === 'list' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted/50'}`}
             >
               <List size={14} />
@@ -295,31 +316,63 @@ ${selected.map((p: any) => {
         </div>
 
         {/* Selection toolbar */}
-        {selectionMode && selectedCodes.size > 0 && (
-          <div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-2xl bg-primary/5 border border-primary/15">
-            <span className="text-xs font-semibold text-primary">
-              {selectedCodes.size} selecionado(s)
-            </span>
-            <div className="ml-auto flex items-center gap-1.5">
+        {selectionMode && (
+          <div className="mb-4 px-3 py-2.5 rounded-2xl bg-primary/5 border border-primary/15 space-y-2">
+            {/* Row 1: count + select all + actions */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-primary">
+                {selectedCodes.size} selecionado(s)
+              </span>
+
+              {/* Select all on page */}
               <button
-                onClick={printSelected}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary text-white text-[10px] font-semibold transition-all active:scale-95"
+                onClick={selectAllOnPage}
+                disabled={allPageSelected}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all active:scale-95 ${
+                  allPageSelected
+                    ? 'bg-muted text-muted-foreground opacity-50'
+                    : 'bg-primary/10 text-primary hover:bg-primary/20'
+                }`}
               >
-                <FileText size={12} /> PDF
+                <CheckCheck size={12} /> Todos da página
               </button>
-              <button
-                onClick={exportSelected}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-card border border-border text-[10px] font-semibold transition-all active:scale-95"
-              >
-                <Share2 size={12} /> HTML
-              </button>
-              <button
-                onClick={clearSelection}
-                className="w-7 h-7 rounded-xl bg-card border border-border flex items-center justify-center transition-all active:scale-95"
-              >
-                <XCircle size={13} className="text-muted-foreground" />
-              </button>
+
+              <div className="ml-auto flex items-center gap-1.5">
+                {selectedCodes.size > 0 && (
+                  <>
+                    <button
+                      onClick={printSelected}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary text-white text-[10px] font-semibold transition-all active:scale-95"
+                    >
+                      <FileText size={12} /> PDF
+                    </button>
+                    <button
+                      onClick={exportSelected}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-card border border-border text-[10px] font-semibold transition-all active:scale-95"
+                    >
+                      <Share2 size={12} /> HTML
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={clearSelection}
+                  className="w-7 h-7 rounded-xl bg-card border border-border flex items-center justify-center transition-all active:scale-95"
+                >
+                  <XCircle size={13} className="text-muted-foreground" />
+                </button>
+              </div>
             </div>
+
+            {/* Row 2: hide info toggle */}
+            {selectedCodes.size > 0 && (
+              <button
+                onClick={() => setHideInfoOnExport(!hideInfoOnExport)}
+                className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {hideInfoOnExport ? <EyeOff size={12} className="text-primary" /> : <Eye size={12} />}
+                {hideInfoOnExport ? 'Catálogo só imagens (info oculta)' : 'Ocultar info no catálogo'}
+              </button>
+            )}
           </div>
         )}
 
@@ -346,30 +399,17 @@ ${selected.map((p: any) => {
             <p className="text-sm font-medium">Nenhum produto encontrado</p>
             <p className="text-xs text-muted-foreground/70">Tente outro termo de busca</p>
           </div>
-        ) : layout === 'list' ? (
-          <div className="flex flex-col gap-2">
-            {produtos?.map?.((p: any) => (
-              <ProductCard
-                key={p?.codigo}
-                produto={p}
-                layout="list"
-                onShare={(prod: any) => setShareProduct(prod)}
-                showPrice={showPrice}
-                showCode={showCode}
-                selectionMode={selectionMode}
-                selected={selectedCodes.has(p?.codigo)}
-                onSelect={toggleSelect}
-                onImageTap={handleImageTap}
-              />
-            ))}
-          </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className={
+            layout === 'list' ? 'flex flex-col gap-2' :
+            layout === 'single' ? 'flex flex-col gap-3' :
+            'grid grid-cols-2 gap-2.5'
+          }>
             {produtos?.map?.((p: any) => (
               <ProductCard
                 key={p?.codigo}
                 produto={p}
-                layout="grid"
+                layout={layout}
                 onShare={(prod: any) => setShareProduct(prod)}
                 showPrice={showPrice}
                 showCode={showCode}
