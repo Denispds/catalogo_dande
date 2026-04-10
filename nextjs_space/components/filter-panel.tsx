@@ -1,20 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface FilterPanelProps {
   departamentos: any[];
   categorias: any[];
-  filters: {
-    departamento: string;
-    categoria: string;
-    subcategoria: string;
-    precoMin: string;
-    precoMax: string;
-    descontoMin: string;
-  };
+  filters: { departamento: string; categoria: string; subcategoria: string; precoMin: string; precoMax: string; descontoMin: string };
   onChange: (filters: any) => void;
   onClear: () => void;
 }
@@ -32,116 +25,161 @@ export default function FilterPanel({ departamentos, categorias, filters, onChan
   };
 
   return (
-    <div className="space-y-2">
+    <>
       <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card hover:bg-primary/5 transition-colors text-sm font-medium"
-        style={{ boxShadow: 'var(--shadow-sm)' }}
+        onClick={() => setOpen(true)}
+        className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 active:scale-95 ${
+          activeCount > 0 ? 'bg-primary text-white' : 'bg-card shadow-sm'
+        }`}
       >
-        <Filter size={16} className="text-primary" />
+        <SlidersHorizontal size={16} />
         Filtros
         {activeCount > 0 && (
-          <span className="bg-primary text-primary-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center">
-            {activeCount}
-          </span>
+          <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold ${
+            activeCount > 0 ? 'bg-white/25 text-white' : 'bg-primary text-white'
+          }`}>{activeCount}</span>
         )}
-        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </button>
 
+      {/* Bottom Sheet Overlay */}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
           >
-            <div className="p-4 rounded-xl bg-card space-y-3" style={{ boxShadow: 'var(--shadow-sm)' }}>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Departamento</label>
-                  <select
-                    value={filters?.departamento ?? ''}
-                    onChange={(e: any) => updateFilter('departamento', e?.target?.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-muted text-sm border-0 focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Todos</option>
-                    {departamentos?.map?.((d: any) => (
-                      <option key={d?.id} value={String(d?.id)}>{d?.nome}</option>
-                    ))}
-                  </select>
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              onClick={(e: any) => e.stopPropagation()}
+              className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl max-h-[85vh] overflow-y-auto safe-bottom"
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
+              </div>
+
+              <div className="px-5 pb-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-bold">Filtros</h3>
+                  <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-muted">
+                    <X size={18} />
+                  </button>
                 </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
-                  <select
-                    value={filters?.categoria ?? ''}
-                    onChange={(e: any) => updateFilter('categoria', e?.target?.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-muted text-sm border-0 focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Todas</option>
-                    {categorias?.map?.((c: any) => (
-                      <option key={c?.id} value={String(c?.id)}>{c?.nome}</option>
-                    ))}
-                  </select>
-                </div>
-                {subcategorias?.length > 0 && (
+
+                <div className="space-y-4">
+                  {/* Departamento */}
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Subcategoria</label>
-                    <select
-                      value={filters?.subcategoria ?? ''}
-                      onChange={(e: any) => updateFilter('subcategoria', e?.target?.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-muted text-sm border-0 focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="">Todas</option>
-                      {subcategorias?.map?.((s: any) => (
-                        <option key={s?.id} value={String(s?.id)}>{s?.nome}</option>
-                      ))}
-                    </select>
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wide">Departamento</label>
+                    <div className="relative">
+                      <select
+                        value={filters?.departamento ?? ''}
+                        onChange={(e: any) => updateFilter('departamento', e?.target?.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-muted/50 text-sm appearance-none focus:ring-2 focus:ring-primary outline-none transition-all"
+                      >
+                        <option value="">Todos os departamentos</option>
+                        {departamentos?.map?.((d: any) => <option key={d?.id} value={String(d?.id)}>{d?.nome}</option>)}
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    </div>
                   </div>
-                )}
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Preço mín</label>
-                  <input
-                    type="number"
-                    value={filters?.precoMin ?? ''}
-                    onChange={(e: any) => updateFilter('precoMin', e?.target?.value)}
-                    placeholder="R$ 0"
-                    className="w-full px-3 py-2 rounded-lg bg-muted text-sm border-0 focus:ring-2 focus:ring-primary"
-                  />
+
+                  {/* Categoria */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wide">Categoria</label>
+                    <div className="relative">
+                      <select
+                        value={filters?.categoria ?? ''}
+                        onChange={(e: any) => updateFilter('categoria', e?.target?.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-muted/50 text-sm appearance-none focus:ring-2 focus:ring-primary outline-none transition-all"
+                      >
+                        <option value="">Todas as categorias</option>
+                        {categorias?.map?.((c: any) => <option key={c?.id} value={String(c?.id)}>{c?.nome}</option>)}
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Subcategoria */}
+                  {subcategorias?.length > 0 && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wide">Subcategoria</label>
+                      <div className="relative">
+                        <select
+                          value={filters?.subcategoria ?? ''}
+                          onChange={(e: any) => updateFilter('subcategoria', e?.target?.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-muted/50 text-sm appearance-none focus:ring-2 focus:ring-primary outline-none transition-all"
+                        >
+                          <option value="">Todas</option>
+                          {subcategorias?.map?.((s: any) => <option key={s?.id} value={String(s?.id)}>{s?.nome}</option>)}
+                        </select>
+                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Faixa de preço */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wide">Faixa de preço</label>
+                    <div className="flex gap-3">
+                      <input
+                        type="number"
+                        value={filters?.precoMin ?? ''}
+                        onChange={(e: any) => updateFilter('precoMin', e?.target?.value)}
+                        placeholder="Mínimo"
+                        className="flex-1 px-4 py-3 rounded-xl bg-muted/50 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                      />
+                      <input
+                        type="number"
+                        value={filters?.precoMax ?? ''}
+                        onChange={(e: any) => updateFilter('precoMax', e?.target?.value)}
+                        placeholder="Máximo"
+                        className="flex-1 px-4 py-3 rounded-xl bg-muted/50 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Desconto mínimo */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wide">Desconto mínimo</label>
+                    <input
+                      type="number"
+                      value={filters?.descontoMin ?? ''}
+                      onChange={(e: any) => updateFilter('descontoMin', e?.target?.value)}
+                      placeholder="Ex: 10%"
+                      className="w-full px-4 py-3 rounded-xl bg-muted/50 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Preço máx</label>
-                  <input
-                    type="number"
-                    value={filters?.precoMax ?? ''}
-                    onChange={(e: any) => updateFilter('precoMax', e?.target?.value)}
-                    placeholder="R$ 999"
-                    className="w-full px-3 py-2 rounded-lg bg-muted text-sm border-0 focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Desconto mín %</label>
-                  <input
-                    type="number"
-                    value={filters?.descontoMin ?? ''}
-                    onChange={(e: any) => updateFilter('descontoMin', e?.target?.value)}
-                    placeholder="0%"
-                    className="w-full px-3 py-2 rounded-lg bg-muted text-sm border-0 focus:ring-2 focus:ring-primary"
-                  />
+
+                {/* Actions */}
+                <div className="flex gap-3 mt-6">
+                  {activeCount > 0 && (
+                    <button
+                      onClick={() => { onClear(); setOpen(false); }}
+                      className="flex-1 py-3 rounded-2xl bg-muted text-sm font-semibold active:scale-[0.98] transition-all duration-200"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="flex-1 py-3 rounded-2xl bg-primary text-white text-sm font-semibold active:scale-[0.98] transition-all duration-200"
+                  >
+                    Aplicar filtros
+                  </button>
                 </div>
               </div>
-              {activeCount > 0 && (
-                <button
-                  onClick={onClear}
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <X size={12} /> Limpar filtros
-                </button>
-              )}
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

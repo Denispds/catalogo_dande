@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Shield, Sparkles, Truck, Share2, Check } from 'lucide-react';
+import { Gem, Share2 } from 'lucide-react';
 import Image from 'next/image';
 
 interface ProductCardProps {
@@ -15,66 +15,52 @@ interface ProductCardProps {
   showCode?: boolean;
 }
 
-const badgeConfig: Record<string, { icon: any; label: string; color: string }> = {
-  garantia: { icon: Shield, label: 'Garantia', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-  novo: { icon: Sparkles, label: 'Novo', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
-  'pronta entrega': { icon: Truck, label: 'Pronta Entrega', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-};
-
 export default function ProductCard({ produto, layout = 'grid', selected = false, onToggleSelect, onShare, showPrice = true, showCode = true }: ProductCardProps) {
   const [imgError, setImgError] = useState(false);
   const mainImage = produto?.imagens?.[0]?.url;
   const hasDiscount = produto?.precoOriginal && produto.precoOriginal > produto?.preco;
   const discountPct = hasDiscount ? Math.round(((produto.precoOriginal - produto.preco) / produto.precoOriginal) * 100) : 0;
-  const badges = produto?.badges ?? [];
+
+  const fmt = (v: number) => `R$ ${(v ?? 0).toFixed(2).replace('.', ',')}`;
 
   if (layout === 'list') {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`flex items-center gap-3 p-3 rounded-xl bg-card transition-all hover:shadow-md ${
-          selected ? 'ring-2 ring-primary' : ''
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
+        onClick={() => onToggleSelect?.(produto?.codigo)}
+        className={`flex items-center gap-3 p-3 rounded-2xl bg-card transition-all duration-300 active:scale-[0.98] ${
+          selected ? 'ring-2 ring-primary shadow-lg shadow-primary/10' : 'shadow-sm'
         }`}
-        style={{ boxShadow: 'var(--shadow-sm)' }}
       >
-        {onToggleSelect && (
-          <button
-            onClick={() => onToggleSelect?.(produto?.codigo)}
-            className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-              selected ? 'bg-primary border-primary text-white' : 'border-muted-foreground/30'
-            }`}
-          >
-            {selected && <Check size={12} />}
-          </button>
-        )}
-        <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+        <div className="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-muted">
           {mainImage && !imgError ? (
             <Image src={mainImage} alt={produto?.nome ?? 'Produto'} fill className="object-cover" onError={() => setImgError(true)} unoptimized />
           ) : (
-            <div className="w-full h-full flex items-center justify-center"><Package size={20} className="text-muted-foreground" /></div>
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
+              <Gem size={20} className="text-primary/40" />
+            </div>
           )}
           {hasDiscount && discountPct > 0 && (
-            <span className="absolute top-0.5 right-0.5 bg-primary text-white text-[9px] font-bold px-1 rounded">-{discountPct}%</span>
+            <span className="absolute top-0 right-0 bg-primary text-white text-[8px] font-bold px-1.5 py-0.5 rounded-bl-lg">-{discountPct}%</span>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{produto?.nome ?? ''}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            {showCode && <span className="text-xs text-muted-foreground">#{produto?.codigo}</span>}
-            <span className="text-xs text-muted-foreground">{produto?.departamento?.nome ?? ''}</span>
-          </div>
+          <p className="text-sm font-semibold truncate">{produto?.nome ?? ''}</p>
+          {showCode && <p className="text-[11px] text-muted-foreground mt-0.5">#{produto?.codigo}</p>}
           {showPrice && (
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm font-bold text-primary">R$ {(produto?.preco ?? 0)?.toFixed?.(2)}</span>
-              {hasDiscount && (
-                <span className="text-xs text-muted-foreground line-through">R$ {(produto?.precoOriginal ?? 0)?.toFixed?.(2)}</span>
-              )}
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm font-bold text-primary">{fmt(produto?.preco)}</span>
+              {hasDiscount && <span className="text-[11px] text-muted-foreground line-through">{fmt(produto?.precoOriginal)}</span>}
             </div>
           )}
         </div>
         {onShare && (
-          <button onClick={() => onShare?.(produto)} className="p-2 rounded-lg hover:bg-accent/20 text-accent transition-colors flex-shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); onShare?.(produto); }}
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-accent/10 text-accent active:scale-90 transition-all duration-200"
+          >
             <Share2 size={16} />
           </button>
         )}
@@ -82,67 +68,72 @@ export default function ProductCard({ produto, layout = 'grid', selected = false
     );
   }
 
+  // Grid layout
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={`relative group rounded-xl overflow-hidden bg-card transition-all hover:shadow-lg ${
-        selected ? 'ring-2 ring-primary' : ''
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      onClick={() => onToggleSelect?.(produto?.codigo)}
+      className={`relative rounded-2xl overflow-hidden bg-card transition-all duration-300 active:scale-[0.97] ${
+        selected ? 'ring-2 ring-primary shadow-lg shadow-primary/10' : 'shadow-sm'
       }`}
-      style={{ boxShadow: 'var(--shadow-sm)' }}
     >
-      {onToggleSelect && (
-        <button
-          onClick={() => onToggleSelect?.(produto?.codigo)}
-          className={`absolute top-2 left-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-            selected ? 'bg-primary border-primary text-white' : 'bg-white/80 border-gray-300 opacity-0 group-hover:opacity-100'
-          }`}
-        >
-          {selected && <Check size={12} />}
-        </button>
-      )}
-      <div className="relative aspect-square bg-muted">
+      {/* Image */}
+      <div className="relative aspect-square bg-muted overflow-hidden">
         {mainImage && !imgError ? (
-          <Image src={mainImage} alt={produto?.nome ?? 'Produto'} fill className="object-cover group-hover:scale-105 transition-transform duration-300" onError={() => setImgError(true)} unoptimized />
+          <Image
+            src={mainImage}
+            alt={produto?.nome ?? 'Produto'}
+            fill
+            className="object-cover transition-transform duration-500 hover:scale-105"
+            onError={() => setImgError(true)}
+            unoptimized
+          />
         ) : (
-          <div className="w-full h-full flex items-center justify-center"><Package size={32} className="text-muted-foreground" /></div>
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-transparent to-primary/10">
+            <Gem size={28} className="text-primary/30" />
+            <span className="text-[9px] text-muted-foreground/50 mt-1 font-medium">SEM FOTO</span>
+          </div>
         )}
+        {/* Discount badge */}
         {hasDiscount && discountPct > 0 && (
-          <span className="absolute top-2 right-2 bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full">-{discountPct}%</span>
+          <div className="absolute top-2 left-2">
+            <span className="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+              -{discountPct}%
+            </span>
+          </div>
         )}
-        {badges?.length > 0 && (
-          <div className="absolute bottom-2 left-2 flex gap-1 flex-wrap">
-            {badges?.map?.((badge: string) => {
-              const config = badgeConfig[badge?.toLowerCase?.()] ?? null;
-              if (!config) return null;
-              const Icon = config.icon;
-              return (
-                <span key={badge} className={`flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${config.color}`}>
-                  <Icon size={10} /> {config.label}
-                </span>
-              );
-            }) ?? []}
+        {/* Share button */}
+        {onShare && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onShare?.(produto); }}
+            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center text-accent shadow-sm active:scale-90 transition-all duration-200"
+          >
+            <Share2 size={14} />
+          </button>
+        )}
+        {/* Selection indicator */}
+        {selected && (
+          <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Info */}
       <div className="p-3">
-        <p className="text-sm font-medium line-clamp-2 min-h-[2.5rem]">{produto?.nome ?? ''}</p>
-        <div className="flex items-center gap-2 mt-1">
-          {showCode && <span className="text-xs text-muted-foreground font-mono">#{produto?.codigo}</span>}
-          <span className="text-xs text-muted-foreground">• {produto?.categoria?.nome ?? ''}</span>
-        </div>
+        <p className="text-[13px] font-semibold line-clamp-2 leading-snug min-h-[2.4rem]">{produto?.nome ?? ''}</p>
+        {showCode && (
+          <p className="text-[10px] text-muted-foreground mt-1 font-medium">#{produto?.codigo}</p>
+        )}
         {showPrice && (
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-2">
-              <span className="text-base font-bold text-primary">R$ {(produto?.preco ?? 0)?.toFixed?.(2)}</span>
-              {hasDiscount && (
-                <span className="text-xs text-muted-foreground line-through">R$ {(produto?.precoOriginal ?? 0)?.toFixed?.(2)}</span>
-              )}
-            </div>
-            {onShare && (
-              <button onClick={() => onShare?.(produto)} className="p-1.5 rounded-lg hover:bg-accent/20 text-accent transition-colors">
-                <Share2 size={14} />
-              </button>
+          <div className="flex items-baseline gap-1.5 mt-1.5">
+            <span className="text-[15px] font-bold text-primary">{fmt(produto?.preco)}</span>
+            {hasDiscount && (
+              <span className="text-[10px] text-muted-foreground line-through">{fmt(produto?.precoOriginal)}</span>
             )}
           </div>
         )}
