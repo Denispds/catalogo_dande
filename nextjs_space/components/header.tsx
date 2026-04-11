@@ -12,7 +12,7 @@ export default function Header() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/', label: 'Catálogo', icon: ShoppingBag },
+    { href: '/', label: 'Produtos', icon: ShoppingBag },
     { href: '/colecoes', label: 'Coleções', icon: Layers },
     { href: '/central', label: 'Central', icon: Briefcase },
     ...(session ? [{ href: '/admin', label: 'Admin', icon: Settings }] : []),

@@ -6,7 +6,7 @@ import ProductCard from '@/components/product-card';
 import FilterPanel from '@/components/filter-panel';
 import ShareModal from '@/components/share-modal';
 import ImageLightbox from '@/components/image-lightbox';
-import { Search, ArrowUpDown, ChevronLeft, ChevronRight, Loader2, Package, X, LayoutGrid, List, Square, CheckSquare, XCircle, FileText, Share2, CheckCheck, EyeOff, Eye } from 'lucide-react';
+import { Search, ArrowUpDown, Loader2, Package, X, LayoutGrid, List, Square, CheckSquare, XCircle, FileText, Share2, CheckCheck, EyeOff, Eye } from 'lucide-react';
 
 const defaultFilters = { departamento: '', categoria: '', subcategoria: '', precoMin: '', precoMax: '', descontoMin: '' };
 const ordemOptions = [
@@ -19,20 +19,22 @@ const ordemOptions = [
 export default function CatalogClient() {
   const [produtos, setProdutos] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [busca, setBusca] = useState('');
   const [buscaInput, setBuscaInput] = useState('');
   const [filters, setFilters] = useState(defaultFilters);
   const [ordem, setOrdem] = useState('nome_asc');
   const [page, setPage] = useState(1);
-  const [limit] = useState(12);
+  const [limit] = useState(50);
   const [departamentos, setDepartamentos] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [shareProduct, setShareProduct] = useState<any>(null);
   const [showPrice] = useState(true);
   const [showCode] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
   const searchTimeoutRef = useRef<any>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Layout & selection state
   const [layout, setLayout] = useState<'grid' | 'single' | 'list'>('grid');
@@ -53,8 +55,11 @@ export default function CatalogClient() {
     setLightboxOpen(true);
   };
 
-  const fetchProdutos = useCallback(async () => {
-    setLoading(true);
+  const fetchProdutos = useCallback(async (pageNum?: number, isLoadingMore: boolean = false) => {
+    const pageToFetch = pageNum ?? page;
+    if (isLoadingMore) setLoadingMore(true);
+    else setLoading(true);
+    
     try {
       const params = new URLSearchParams();
       if (busca) params.set('busca', busca);
@@ -65,23 +70,47 @@ export default function CatalogClient() {
       if (filters?.precoMax) params.set('precoMax', filters.precoMax);
       if (filters?.descontoMin) params.set('descontoMin', filters.descontoMin);
       params.set('ordem', ordem);
-      params.set('page', String(page));
+      params.set('page', String(pageToFetch));
       params.set('limit', String(limit));
-      if (!busca) params.set('comImagem', 'true');
+      // Sempre usar comImagem=true para garantir apenas produtos com imagens
+      params.set('comImagem', 'true');
+      
       const res = await fetch(`/api/produtos?${params.toString()}`);
       const data = await res.json();
-      setProdutos(data?.produtos ?? []);
+      
+      if (isLoadingMore) {
+        // Concatenar produtos ao carregar mais
+        setProdutos(prev => [...prev, ...(data?.produtos ?? [])]);
+      } else {
+        // Reset na primeira carga
+        setProdutos(data?.produtos ?? []);
+      }
+      
       setTotal(data?.total ?? 0);
-      setTotalPages(data?.totalPages ?? 0);
+      const totalPages = data?.totalPages ?? 0;
+      setHasMore(pageToFetch < totalPages);
     } catch (e: any) {
       console.error('Fetch error:', e);
-      setProdutos([]);
+      if (!isLoadingMore) setProdutos([]);
     }
-    setLoading(false);
-  }, [busca, filters, ordem, page, limit]);
+    
+    if (isLoadingMore) setLoadingMore(false);
+    else setLoading(false);
+  }, [busca, filters, ordem, limit]);
 
-  useEffect(() => { fetchProdutos(); }, [fetchProdutos]);
+  // Fetch inicial
+  useEffect(() => { 
+    if (page === 1) fetchProdutos(1, false); 
+  }, [fetchProdutos]);
 
+  // Reset quando filtros/busca/ordem mudam
+  useEffect(() => {
+    setPage(1);
+    setProdutos([]);
+    setHasMore(true);
+  }, [busca, filters, ordem]);
+
+  // Carregar departamentos e categorias
   useEffect(() => {
     Promise.all([
       fetch('/api/departamentos').then((r: any) => r?.json?.()).catch(() => []),
@@ -91,6 +120,25 @@ export default function CatalogClient() {
       setCategorias(cats ?? []);
     });
   }, []);
+
+  // Intersection Observer para scroll infinito
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMore) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingMore && hasMore) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchProdutos(nextPage, true);
+        }
+      },
+      { rootMargin: '100px' }
+    );
+    
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [page, loadingMore, hasMore, fetchProdutos]);
 
   const handleSearchInput = (e: any) => {
     const val = e?.target?.value ?? '';
@@ -422,45 +470,13 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo)).join('')}
           </div>
         )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-1.5 mt-6 mb-4">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page <= 1}
-              className="w-9 h-9 rounded-2xl bg-card flex items-center justify-center disabled:opacity-30 transition-all duration-300 active:scale-90 shadow-sm border border-border/50"
-            >
-              <ChevronLeft size={15} />
-            </button>
-
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i: number) => {
-              let pageNum: number;
-              if (totalPages <= 5) pageNum = i + 1;
-              else if (page <= 3) pageNum = i + 1;
-              else if (page >= totalPages - 2) pageNum = totalPages - 4 + i;
-              else pageNum = page - 2 + i;
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setPage(pageNum)}
-                  className={`w-9 h-9 rounded-2xl text-xs font-semibold transition-all duration-300 active:scale-90 ${
-                    page === pageNum
-                      ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                      : 'bg-card hover:bg-muted shadow-sm border border-border/50'
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
-
-            <button
-              onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page >= totalPages}
-              className="w-9 h-9 rounded-2xl bg-card flex items-center justify-center disabled:opacity-30 transition-all duration-300 active:scale-90 shadow-sm border border-border/50"
-            >
-              <ChevronRight size={15} />
-            </button>
+        {/* Infinite scroll loader */}
+        {hasMore && (
+          <div 
+            ref={loadMoreRef} 
+            className="flex items-center justify-center py-8"
+          >
+            {loadingMore && <Loader2 size={24} className="animate-spin text-primary" />}
           </div>
         )}
       </main>
