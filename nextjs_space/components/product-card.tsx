@@ -267,7 +267,7 @@ export default function ProductCard({
 
       {/* Image area */}
       <div
-        className="relative aspect-square bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer"
+        className="relative aspect-[4/5] bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer"
         onClick={handleImageTap}
       >
         {currentImage && !imgError ? (
