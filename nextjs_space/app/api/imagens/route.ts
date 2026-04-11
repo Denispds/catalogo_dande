@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { produtoCodigo, url, cloudStoragePath, isPublic, principal } = body ?? {};
+    const { produtoCodigo, url, cloudStoragePath, isPublic, principal, tipo, thumbnailUrl } = body ?? {};
     if (!produtoCodigo) {
       return NextResponse.json({ error: 'C\u00f3digo do produto obrigat\u00f3rio' }, { status: 400 });
     }
@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
         isPublic: isPublic ?? true,
         principal: principal ?? false,
         ordem: (maxOrdem?.ordem ?? -1) + 1,
+        tipo: tipo ?? 'image',
+        thumbnailUrl: thumbnailUrl ?? null,
       },
     });
     return NextResponse.json(imagem, { status: 201 });

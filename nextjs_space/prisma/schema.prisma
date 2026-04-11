@@ -90,6 +90,8 @@ model CatImagem {
   principal      Boolean  @default(false)
   ordem          Int      @default(0)
   driveFileId    String?  @map("drive_file_id")
+  tipo           String   @default("image")
+  thumbnailUrl   String?  @map("thumbnail_url")
   createdAt      DateTime @default(now()) @map("created_at")
 
   produto        CatProduto @relation(fields: [produtoCodigo], references: [codigo], onDelete: Cascade)

@@ -2,11 +2,17 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface MediaItem {
+  url: string;
+  tipo?: string;
+  thumbnailUrl?: string;
+}
+
 interface ImageLightboxProps {
-  images: { url: string }[];
+  images: MediaItem[];
   initialIndex?: number;
   isOpen: boolean;
   onClose: () => void;
@@ -16,11 +22,13 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
+  const current = images[currentIndex];
+  const isVideo = current?.tipo === 'video';
+
   useEffect(() => {
     if (isOpen) setCurrentIndex(initialIndex);
   }, [isOpen, initialIndex]);
 
-  // Lock body scroll
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -36,7 +44,6 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
     if (images.length > 1) setCurrentIndex((i) => (i - 1 + images.length) % images.length);
   }, [images.length]);
 
-  // Keyboard nav
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
@@ -85,7 +92,14 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
             <X size={20} className="text-white" />
           </button>
 
-          {/* Image */}
+          {/* Counter */}
+          {images.length > 1 && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 text-white/70 text-sm font-medium">
+              {currentIndex + 1} / {images.length}
+            </div>
+          )}
+
+          {/* Media */}
           <div className="relative w-full h-full" onClick={(e) => e.stopPropagation()}>
             <AnimatePresence mode="wait">
               <motion.div
@@ -94,16 +108,27 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                className="absolute inset-0"
+                className="absolute inset-0 flex items-center justify-center"
               >
-                <Image
-                  src={images[currentIndex]?.url ?? ''}
-                  alt="Produto Dande"
-                  fill
-                  className="object-contain"
-                  unoptimized
-                  priority
-                />
+                {isVideo ? (
+                  <video
+                    src={current?.url ?? ''}
+                    className="max-w-full max-h-full object-contain"
+                    controls
+                    autoPlay
+                    playsInline
+                    onEnded={() => { if (images.length > 1) goNext(); }}
+                  />
+                ) : (
+                  <Image
+                    src={current?.url ?? ''}
+                    alt="Produto Dande"
+                    fill
+                    className="object-contain"
+                    unoptimized
+                    priority
+                  />
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -126,17 +151,21 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
             </>
           )}
 
-          {/* Dots */}
+          {/* Dots with video indicator */}
           {images.length > 1 && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
-              {images.map((_: any, i: number) => (
+              {images.map((item: MediaItem, i: number) => (
                 <button
                   key={i}
                   onClick={(e) => { e.stopPropagation(); setCurrentIndex(i); }}
-                  className={`rounded-full transition-all duration-300 ${
-                    i === currentIndex ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/40'
+                  className={`rounded-full transition-all duration-300 flex items-center justify-center ${
+                    i === currentIndex ? 'w-6 h-2.5 bg-white' : 'w-2.5 h-2.5 bg-white/40'
                   }`}
-                />
+                >
+                  {item?.tipo === 'video' && i === currentIndex && (
+                    <Play size={7} fill="currentColor" className="text-primary ml-px" />
+                  )}
+                </button>
               ))}
             </div>
           )}

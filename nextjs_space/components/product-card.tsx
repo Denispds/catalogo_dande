@@ -1,8 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Share2, Check } from 'lucide-react';
+import { Share2, Check, Play } from 'lucide-react';
 import Image from 'next/image';
+
+interface MediaItem {
+  url: string;
+  tipo?: string;
+  thumbnailUrl?: string;
+}
 
 interface ProductCardProps {
   produto: any;
@@ -37,20 +43,23 @@ export default function ProductCard({
   const [imgLoaded, setImgLoaded] = useState(false);
   const [activeImgIdx, setActiveImgIdx] = useState(0);
   const timerRef = useRef<any>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const images: { url: string }[] = produto?.imagens ?? [];
-  const hasMultipleImages = images.length > 1;
-  const currentImage = images[activeImgIdx]?.url;
+  const media: MediaItem[] = produto?.imagens ?? [];
+  const hasMultipleMedia = media.length > 1;
+  const current = media[activeImgIdx];
+  const isVideo = current?.tipo === 'video';
+  const displayUrl = isVideo ? (current?.thumbnailUrl || current?.url) : current?.url;
 
   const fmt = (v: number) => `R$ ${v?.toFixed(2)?.replace('.', ',')}`;
 
-  // Auto-rotate images every 3s
+  // Auto-rotate media every 3s (pause on video)
   const startRotation = useCallback(() => {
-    if (!hasMultipleImages) return;
+    if (!hasMultipleMedia) return;
     timerRef.current = setInterval(() => {
-      setActiveImgIdx((prev) => (prev + 1) % images.length);
+      setActiveImgIdx((prev) => (prev + 1) % media.length);
     }, 3000);
-  }, [hasMultipleImages, images.length]);
+  }, [hasMultipleMedia, media.length]);
 
   const stopRotation = useCallback(() => {
     if (timerRef.current) {
@@ -60,9 +69,26 @@ export default function ProductCard({
   }, []);
 
   useEffect(() => {
-    startRotation();
+    if (isVideo) {
+      stopRotation();
+    } else {
+      startRotation();
+    }
     return stopRotation;
-  }, [startRotation, stopRotation]);
+  }, [startRotation, stopRotation, isVideo, activeImgIdx]);
+
+  // When video ends, advance to next
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid || !isVideo) return;
+    const onEnded = () => {
+      if (hasMultipleMedia) {
+        setActiveImgIdx((prev) => (prev + 1) % media.length);
+      }
+    };
+    vid.addEventListener('ended', onEnded);
+    return () => vid.removeEventListener('ended', onEnded);
+  }, [isVideo, hasMultipleMedia, media.length, activeImgIdx]);
 
   const handleTap = () => {
     if (selectionMode && onSelect) {
@@ -76,11 +102,124 @@ export default function ProductCard({
       onSelect(produto);
       return;
     }
-    if (onImageTap && images.length > 0) {
+    if (onImageTap && media.length > 0) {
       onImageTap(produto, activeImgIdx);
     }
   };
 
+  const handleDotClick = (e: React.MouseEvent, idx: number) => {
+    e.stopPropagation();
+    stopRotation();
+    setActiveImgIdx(idx);
+  };
+
+  // Indicators component
+  const MediaIndicators = ({ size = 'sm' }: { size?: 'sm' | 'md' }) => {
+    if (!hasMultipleMedia) return null;
+    const dotActive = size === 'md' ? 'w-5 h-2' : 'w-4 h-1.5';
+    const dotInactive = size === 'md' ? 'w-2 h-2' : 'w-1.5 h-1.5';
+    return (
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
+        {media.map((_: MediaItem, i: number) => {
+          const isVid = _?.tipo === 'video';
+          const isActive = i === activeImgIdx;
+          return (
+            <button
+              key={i}
+              onClick={(e) => handleDotClick(e, i)}
+              className={`rounded-full transition-all duration-300 flex items-center justify-center ${
+                isActive ? `${dotActive} bg-white shadow-sm` : `${dotInactive} bg-white/50 hover:bg-white/70`
+              }`}
+            >
+              {isVid && isActive && <Play size={6} fill="currentColor" className="text-primary ml-px" />}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Count badge
+  const MediaCount = () => {
+    if (!hasMultipleMedia) return null;
+    return (
+      <div className="absolute top-2 left-2 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded-full font-medium z-10 flex items-center gap-0.5">
+        {activeImgIdx + 1}/{media.length}
+      </div>
+    );
+  };
+
+  // Video or Image renderer
+  const MediaRenderer = ({ aspectClass, objectFit = 'object-cover' }: { aspectClass: string; objectFit?: string }) => {
+    if (isVideo) {
+      return (
+        <div className={`relative ${aspectClass} bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer`} onClick={handleImageTap}>
+          <video
+            ref={videoRef}
+            src={current?.url}
+            className={`w-full h-full ${objectFit}`}
+            autoPlay
+            muted
+            playsInline
+            loop={!hasMultipleMedia}
+          />
+          <MediaCount />
+          <MediaIndicators />
+          {onShare && !selectionMode && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onShare?.(produto); }}
+              className="absolute top-2 right-2 w-7 h-7 bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white hover:scale-110 active:scale-95 shadow-md z-10"
+            >
+              <Share2 size={13} className="text-gray-700 dark:text-gray-200" />
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className={`relative ${aspectClass} bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer`} onClick={handleImageTap}>
+        {displayUrl && !imgError ? (
+          <>
+            <Image
+              src={displayUrl}
+              alt={produto?.nome ?? 'Produto Dande'}
+              fill
+              className={`${objectFit} transition-all duration-700 ease-out group-hover:scale-105 ${
+                imgLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setImgError(true)}
+              unoptimized
+            />
+            {!imgLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full border-2 border-pink-200 border-t-pink-500 animate-spin" />
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+            <div className="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+              <span className="text-lg">\uD83D\uDC8E</span>
+            </div>
+          </div>
+        )}
+        <MediaCount />
+        <MediaIndicators />
+        {onShare && !selectionMode && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onShare?.(produto); }}
+            className="absolute top-2 right-2 w-7 h-7 bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white hover:scale-110 active:scale-95 shadow-md z-10"
+          >
+            <Share2 size={13} className="text-gray-700 dark:text-gray-200" />
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  // ---- LIST LAYOUT ----
   if (layout === 'list') {
     return (
       <div
@@ -97,57 +236,31 @@ export default function ProductCard({
           </div>
         )}
 
-        {/* Image */}
-        <div
-          className="relative w-24 h-24 flex-shrink-0 bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 cursor-pointer"
-          onClick={handleImageTap}
-        >
-          {currentImage && !imgError ? (
-            <Image
-              src={currentImage}
-              alt={produto?.nome ?? 'Produto Dande'}
-              fill
-              className="object-cover transition-opacity duration-500"
-              onLoad={() => setImgLoaded(true)}
-              onError={() => setImgError(true)}
-              unoptimized
-            />
+        <div className="relative w-24 h-24 flex-shrink-0 bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 cursor-pointer overflow-hidden" onClick={handleImageTap}>
+          {isVideo ? (
+            <video src={current?.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+          ) : displayUrl && !imgError ? (
+            <Image src={displayUrl} alt={produto?.nome ?? 'Produto'} fill className="object-cover" onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} unoptimized />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-lg">💎</span>
-            </div>
+            <div className="w-full h-full flex items-center justify-center"><span className="text-lg">\uD83D\uDC8E</span></div>
           )}
-          {hasMultipleImages && (
+          {hasMultipleMedia && (
             <div className="absolute bottom-1 right-1 bg-black/50 text-white text-[8px] px-1.5 py-0.5 rounded-full font-medium">
-              {activeImgIdx + 1}/{images.length}
+              {activeImgIdx + 1}/{media.length}
             </div>
           )}
         </div>
 
-        {/* Info — name on top, code + price aligned on bottom */}
         <div className="flex-1 py-2 pr-3 min-w-0">
-          <h3 className="text-xs font-semibold leading-tight line-clamp-1 text-foreground mb-1">
-            {shortName(produto?.nome)}
-          </h3>
+          <h3 className="text-xs font-semibold leading-tight line-clamp-1 text-foreground mb-1">{shortName(produto?.nome)}</h3>
           <div className="flex items-center justify-between gap-2">
-            {showCode && (
-              <span className="text-[10px] font-mono text-muted-foreground">
-                {produto?.codigo}
-              </span>
-            )}
-            {showPrice && (
-              <span className="text-sm font-bold text-primary">
-                {fmt(produto?.preco ?? 0)}
-              </span>
-            )}
+            {showCode && <span className="text-[10px] font-mono text-muted-foreground">{produto?.codigo}</span>}
+            {showPrice && <span className="text-sm font-bold text-primary">{fmt(produto?.preco ?? 0)}</span>}
           </div>
         </div>
 
         {onShare && !selectionMode && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onShare?.(produto); }}
-            className="mr-3 w-8 h-8 bg-muted/60 rounded-full flex items-center justify-center transition-all hover:bg-muted active:scale-90"
-          >
+          <button onClick={(e) => { e.stopPropagation(); onShare?.(produto); }} className="mr-3 w-8 h-8 bg-muted/60 rounded-full flex items-center justify-center transition-all hover:bg-muted active:scale-90">
             <Share2 size={14} className="text-muted-foreground" />
           </button>
         )}
@@ -155,7 +268,7 @@ export default function ProductCard({
     );
   }
 
-  // Single layout (1 per row, large card)
+  // ---- SINGLE LAYOUT ----
   if (layout === 'single') {
     return (
       <div
@@ -172,76 +285,14 @@ export default function ProductCard({
           </div>
         )}
 
-        <div
-          className="relative aspect-[3/4] bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer"
-          onClick={handleImageTap}
-        >
-          {currentImage && !imgError ? (
-            <>
-              <Image
-                src={currentImage}
-                alt={produto?.nome ?? 'Produto Dande'}
-                fill
-                className={`object-contain transition-all duration-700 ease-out ${
-                  imgLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-                onLoad={() => setImgLoaded(true)}
-                onError={() => setImgError(true)}
-                unoptimized
-              />
-              {!imgLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-full border-2 border-pink-200 border-t-pink-500 animate-spin" />
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
-                <span className="text-2xl">💎</span>
-              </div>
-            </div>
-          )}
-
-          {hasMultipleImages && (
-            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
-              {images.map((_: any, i: number) => (
-                <div
-                  key={i}
-                  className={`rounded-full transition-all duration-300 ${
-                    i === activeImgIdx ? 'w-5 h-2 bg-white shadow-sm' : 'w-2 h-2 bg-white/50'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-
-          {onShare && !selectionMode && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onShare?.(produto); }}
-              className="absolute top-3 right-3 w-9 h-9 bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white hover:scale-110 active:scale-95 shadow-md"
-            >
-              <Share2 size={16} className="text-gray-700 dark:text-gray-200" />
-            </button>
-          )}
-        </div>
+        <MediaRenderer aspectClass="aspect-[3/4]" objectFit="object-contain" />
 
         {(showPrice || showCode) && (
           <div className="px-3 py-2">
-            <h3 className="text-xs font-medium leading-tight line-clamp-1 text-muted-foreground mb-0.5">
-              {shortName(produto?.nome)}
-            </h3>
+            <h3 className="text-xs font-medium leading-tight line-clamp-1 text-muted-foreground mb-0.5">{shortName(produto?.nome)}</h3>
             <div className="flex items-center justify-between">
-              {showCode && (
-                <span className="text-[10px] font-mono text-muted-foreground/70">
-                  {produto?.codigo}
-                </span>
-              )}
-              {showPrice && (
-                <span className="text-sm font-bold text-primary">
-                  {fmt(produto?.preco ?? 0)}
-                </span>
-              )}
+              {showCode && <span className="text-[10px] font-mono text-muted-foreground/70">{produto?.codigo}</span>}
+              {showPrice && <span className="text-sm font-bold text-primary">{fmt(produto?.preco ?? 0)}</span>}
             </div>
           </div>
         )}
@@ -249,7 +300,7 @@ export default function ProductCard({
     );
   }
 
-  // Grid layout (2 per row)
+  // ---- GRID LAYOUT (default) ----
   return (
     <div
       onClick={handleTap}
@@ -265,79 +316,13 @@ export default function ProductCard({
         </div>
       )}
 
-      {/* Image area */}
-      <div
-        className="relative aspect-[4/5] bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer"
-        onClick={handleImageTap}
-      >
-        {currentImage && !imgError ? (
-          <>
-            <Image
-              src={currentImage}
-              alt={produto?.nome ?? 'Produto Dande'}
-              fill
-              className={`object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
-                imgLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              onLoad={() => setImgLoaded(true)}
-              onError={() => setImgError(true)}
-              unoptimized
-            />
-            {!imgLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-7 h-7 rounded-full border-2 border-pink-200 border-t-pink-500 animate-spin" />
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-            <div className="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
-              <span className="text-lg">💎</span>
-            </div>
-          </div>
-        )}
+      <MediaRenderer aspectClass="aspect-[4/5]" />
 
-        {/* Image dots for multi-image */}
-        {hasMultipleImages && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1">
-            {images.map((_: any, i: number) => (
-              <div
-                key={i}
-                className={`rounded-full transition-all duration-300 ${
-                  i === activeImgIdx ? 'w-4 h-1.5 bg-white shadow-sm' : 'w-1.5 h-1.5 bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Share button */}
-        {onShare && !selectionMode && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onShare?.(produto); }}
-            className="absolute top-2 right-2 w-7 h-7 bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white hover:scale-110 active:scale-95 shadow-md"
-          >
-            <Share2 size={13} className="text-gray-700 dark:text-gray-200" />
-          </button>
-        )}
-      </div>
-
-      {/* Info: name on top, code + price aligned below */}
       <div className="px-2.5 py-1.5">
-        <h3 className="text-[11px] font-medium leading-tight line-clamp-1 text-muted-foreground mb-0.5">
-          {shortName(produto?.nome)}
-        </h3>
+        <h3 className="text-[11px] font-medium leading-tight line-clamp-1 text-muted-foreground mb-0.5">{shortName(produto?.nome)}</h3>
         <div className="flex items-center justify-between">
-          {showCode && (
-            <span className="text-[10px] font-mono text-muted-foreground/70">
-              {produto?.codigo}
-            </span>
-          )}
-          {showPrice && (
-            <span className="text-xs font-bold text-primary">
-              {fmt(produto?.preco ?? 0)}
-            </span>
-          )}
+          {showCode && <span className="text-[10px] font-mono text-muted-foreground/70">{produto?.codigo}</span>}
+          {showPrice && <span className="text-xs font-bold text-primary">{fmt(produto?.preco ?? 0)}</span>}
         </div>
       </div>
     </div>

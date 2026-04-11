@@ -16,3 +16,25 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ error: 'Erro ao deletar imagem' }, { status: 500 });
   }
 }
+
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const body = await request.json();
+    const { principal } = body ?? {};
+    if (principal === true) {
+      const imagem = await prisma.catImagem.findUnique({ where: { id: params?.id } });
+      if (!imagem) return NextResponse.json({ error: 'N\u00e3o encontrada' }, { status: 404 });
+      await prisma.catImagem.updateMany({
+        where: { produtoCodigo: imagem.produtoCodigo, principal: true },
+        data: { principal: false },
+      });
+      await prisma.catImagem.update({ where: { id: params.id }, data: { principal: true } });
+    } else if (principal === false) {
+      await prisma.catImagem.update({ where: { id: params.id }, data: { principal: false } });
+    }
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Imagem PATCH error:', error);
+    return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 });
+  }
+}

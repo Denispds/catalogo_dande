@@ -124,39 +124,160 @@ export default function AdminClient() {
       badges: p?.badges ?? [],
     });
     setShowForm(true);
+    fetchProductMedia(p?.codigo);
   };
 
-  const handleImageUpload = async (codigo: string, file: File) => {
-    setUploadingImage(true);
+  const [productMedia, setProductMedia] = useState<any[]>([]);
+  const [loadingMedia, setLoadingMedia] = useState(false);
+
+  const fetchProductMedia = async (codigo: string) => {
+    setLoadingMedia(true);
     try {
-      const presignedRes = await fetch('/api/upload/presigned', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, contentType: file.type, isPublic: true }),
-      });
-      const { uploadUrl, cloud_storage_path } = await presignedRes?.json?.() ?? {};
-      if (!uploadUrl) { toast.error('Erro ao gerar URL de upload'); setUploadingImage(false); return; }
+      const res = await fetch(`/api/produtos/${codigo}`);
+      const data = await res?.json?.();
+      setProductMedia(data?.imagens ?? []);
+    } catch { setProductMedia([]); }
+    setLoadingMedia(false);
+  };
 
-      const signedHeaders = new URL(uploadUrl).searchParams.get('X-Amz-SignedHeaders') ?? '';
-      const headers: any = { 'Content-Type': file.type };
-      if (signedHeaders?.includes?.('content-disposition')) headers['Content-Disposition'] = 'attachment';
+  const validateVideoDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(video.src);
+        resolve(video.duration);
+      };
+      video.onerror = () => reject(new Error('Erro ao ler v\u00eddeo'));
+      video.src = URL.createObjectURL(file);
+    });
+  };
 
-      await fetch(uploadUrl, { method: 'PUT', headers, body: file });
+  const generateVideoThumbnail = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'auto';
+      video.muted = true;
+      video.playsInline = true;
+      const canvas = document.createElement('canvas');
+      video.onloadeddata = () => {
+        video.currentTime = 0.5;
+      };
+      video.onseeked = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d')?.drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        URL.revokeObjectURL(video.src);
+        resolve(dataUrl);
+      };
+      video.onerror = () => reject(new Error('Erro ao gerar thumbnail'));
+      video.src = URL.createObjectURL(file);
+    });
+  };
 
-      const bucketName = process.env.NEXT_PUBLIC_AWS_BUCKET_NAME ?? '';
-      const region = process.env.NEXT_PUBLIC_AWS_REGION ?? 'us-east-1';
-      const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${cloud_storage_path}`;
+  const uploadSingleFile = async (file: File): Promise<{ url: string; cloudStoragePath: string }> => {
+    const presignedRes = await fetch('/api/upload/presigned', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName: file.name, contentType: file.type, isPublic: true }),
+    });
+    const { uploadUrl, cloud_storage_path } = await presignedRes?.json?.() ?? {};
+    if (!uploadUrl) throw new Error('Erro ao gerar URL');
 
-      await fetch('/api/imagens', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ produtoCodigo: codigo, url: publicUrl, cloudStoragePath: cloud_storage_path, isPublic: true, principal: true }),
-      });
+    const signedHeaders = new URL(uploadUrl).searchParams.get('X-Amz-SignedHeaders') ?? '';
+    const hdrs: any = { 'Content-Type': file.type };
+    if (signedHeaders?.includes?.('content-disposition')) hdrs['Content-Disposition'] = 'attachment';
 
-      toast.success('Imagem enviada!');
+    await fetch(uploadUrl, { method: 'PUT', headers: hdrs, body: file });
+
+    const bucketName = process.env.NEXT_PUBLIC_AWS_BUCKET_NAME ?? '';
+    const region = process.env.NEXT_PUBLIC_AWS_REGION ?? 'us-east-1';
+    const url = `https://${bucketName}.s3.${region}.amazonaws.com/${cloud_storage_path}`;
+    return { url, cloudStoragePath: cloud_storage_path };
+  };
+
+  const uploadThumbnailBlob = async (dataUrl: string): Promise<{ url: string; cloudStoragePath: string }> => {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], `thumb-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    return uploadSingleFile(file);
+  };
+
+  const handleMediaUpload = async (codigo: string, files: FileList) => {
+    setUploadingImage(true);
+    let success = 0;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const isVideo = file.type.startsWith('video/');
+        if (isVideo) {
+          const duration = await validateVideoDuration(file);
+          if (duration > 10) {
+            toast.error(`${file.name}: v\u00eddeo excede 10 segundos (${Math.round(duration)}s)`);
+            continue;
+          }
+        }
+
+        const { url, cloudStoragePath } = await uploadSingleFile(file);
+
+        let thumbnailUrl: string | null = null;
+        if (isVideo) {
+          try {
+            const thumbDataUrl = await generateVideoThumbnail(file);
+            const thumbResult = await uploadThumbnailBlob(thumbDataUrl);
+            thumbnailUrl = thumbResult.url;
+          } catch { /* thumbnail optional */ }
+        }
+
+        const existingCount = productMedia.length + success;
+        await fetch('/api/imagens', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            produtoCodigo: codigo,
+            url,
+            cloudStoragePath: cloudStoragePath,
+            isPublic: true,
+            principal: existingCount === 0,
+            tipo: isVideo ? 'video' : 'image',
+            thumbnailUrl,
+          }),
+        });
+        success++;
+      } catch (e: any) {
+        toast.error(`Erro em ${file.name}`);
+        console.error(e);
+      }
+    }
+    if (success > 0) {
+      toast.success(`${success} arquivo(s) enviado(s)!`);
+      fetchProductMedia(codigo);
       fetchProdutos();
-    } catch (e: any) { toast.error('Erro no upload'); console.error(e); }
+    }
     setUploadingImage(false);
+  };
+
+  const handleDeleteMedia = async (id: string, codigo: string) => {
+    try {
+      await fetch(`/api/imagens/${id}`, { method: 'DELETE' });
+      toast.success('M\u00eddia removida');
+      fetchProductMedia(codigo);
+      fetchProdutos();
+    } catch { toast.error('Erro ao remover'); }
+  };
+
+  const handleSetPrincipal = async (id: string, codigo: string) => {
+    try {
+      await fetch(`/api/imagens/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ principal: true }),
+      });
+      fetchProductMedia(codigo);
+      fetchProdutos();
+      toast.success('Imagem principal definida');
+    } catch { toast.error('Erro'); }
   };
 
   const handleCreateColecao = async () => {
@@ -359,16 +480,80 @@ export default function AdminClient() {
                         </div>
                       </div>
                       {editProduct && (
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">Upload de Foto</label>
-                          <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted cursor-pointer hover:bg-muted/80 text-sm">
-                            <Upload size={14} />
-                            {uploadingImage ? 'Enviando...' : 'Escolher arquivo'}
-                            <input type="file" accept="image/*" className="hidden" disabled={uploadingImage} onChange={(e: any) => {
-                              const file = e?.target?.files?.[0];
-                              if (file) handleImageUpload(editProduct?.codigo, file);
-                            }} />
+                        <div className="space-y-3">
+                          <label className="text-xs text-muted-foreground block">M&#237;dias do Produto ({productMedia.length})</label>
+
+                          {/* Galeria de mídias existentes */}
+                          {loadingMedia ? (
+                            <div className="flex items-center justify-center py-4"><Loader2 size={20} className="animate-spin text-primary" /></div>
+                          ) : productMedia.length > 0 ? (
+                            <div className="grid grid-cols-3 gap-2">
+                              {productMedia.map((m: any, idx: number) => (
+                                <div key={m.id} className={`relative group rounded-lg overflow-hidden border-2 ${m.principal ? 'border-primary' : 'border-transparent'}`}>
+                                  <div className="relative aspect-square bg-muted">
+                                    {m.tipo === 'video' ? (
+                                      <video src={m.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                                    ) : (
+                                      <img src={m.url} alt={`M\u00eddia ${idx + 1}`} className="w-full h-full object-cover" />
+                                    )}
+                                    {m.tipo === 'video' && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
+                                          <span className="text-white text-xs ml-0.5">&#9654;</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {m.principal && (
+                                      <div className="absolute top-1 left-1 bg-primary text-white text-[8px] px-1.5 py-0.5 rounded font-bold">PRINCIPAL</div>
+                                    )}
+                                  </div>
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                                    {!m.principal && m.tipo !== 'video' && (
+                                      <button
+                                        onClick={() => handleSetPrincipal(m.id, editProduct.codigo)}
+                                        className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-primary hover:bg-white"
+                                        title="Definir como principal"
+                                      >
+                                        <ImageIcon size={12} />
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleDeleteMedia(m.id, editProduct.codigo)}
+                                      className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-destructive hover:bg-white"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">Nenhuma m&#237;dia cadastrada</p>
+                          )}
+
+                          {/* Upload múltiplo */}
+                          <label className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-muted cursor-pointer hover:bg-muted/80 text-sm border border-dashed border-border">
+                            <Upload size={14} className="text-primary" />
+                            {uploadingImage ? (
+                              <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Enviando...</span>
+                            ) : (
+                              <span>Adicionar imagens ou v&#237;deos (m&#225;x 10s)</span>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*,video/mp4,video/webm,video/quicktime"
+                              multiple
+                              className="hidden"
+                              disabled={uploadingImage}
+                              onChange={(e: any) => {
+                                const files = e?.target?.files;
+                                if (files?.length > 0) handleMediaUpload(editProduct?.codigo, files);
+                                e.target.value = '';
+                              }}
+                            />
                           </label>
+                          <p className="text-[10px] text-muted-foreground">Formatos: PNG, JPG, WEBP, GIF, MP4, WEBM. V&#237;deos at&#233; 10 segundos.</p>
                         </div>
                       )}
                     </div>
