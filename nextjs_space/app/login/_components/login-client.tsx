@@ -24,7 +24,7 @@ export default function LoginClient() {
       if (isLogin) {
         const result = await signIn('credentials', { email, password, redirect: false });
         if (result?.error) {
-          toast.error('Credenciais inv\u00e1lidas');
+          toast.error('Credenciais inválidas');
         } else {
           router.replace('/admin');
         }
@@ -54,7 +54,7 @@ export default function LoginClient() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold"><span className="text-primary">\u2726</span> Dande</h1>
+          <h1 className="text-3xl font-bold"><span className="text-primary">✦</span> Dande</h1>
           <p className="text-sm text-muted-foreground mt-1">Painel Administrativo</p>
         </div>
         <form onSubmit={handleSubmit} className="bg-card rounded-2xl p-6 space-y-4" style={{ boxShadow: 'var(--shadow-md)' }}>
@@ -72,7 +72,7 @@ export default function LoginClient() {
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Senha</label>
             <div className="relative">
-              <input type={showPw ? 'text' : 'password'} value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="\u2022\u2022\u2022\u2022\u2022\u2022" className="w-full px-4 py-2.5 pr-10 rounded-xl bg-muted text-sm focus:ring-2 focus:ring-primary outline-none" />
+              <input type={showPw ? 'text' : 'password'} value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="••••••" className="w-full px-4 py-2.5 pr-10 rounded-xl bg-muted text-sm focus:ring-2 focus:ring-primary outline-none" />
               <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -83,7 +83,7 @@ export default function LoginClient() {
             {isLogin ? 'Entrar' : 'Cadastrar'}
           </button>
           <button type="button" onClick={() => setIsLogin(!isLogin)} className="w-full text-xs text-primary hover:underline text-center">
-            {isLogin ? 'N\u00e3o tem conta? Cadastre-se' : 'J\u00e1 tem conta? Entrar'}
+            {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entrar'}
           </button>
         </form>
       </motion.div>

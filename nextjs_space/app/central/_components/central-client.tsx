@@ -50,13 +50,13 @@ export default function CentralClient() {
       <main className="max-w-lg mx-auto px-4 py-6 space-y-8 pb-24">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Central do <span className="text-primary">Vendedor</span></h1>
-          <p className="text-sm text-muted-foreground mt-1">Informa\u00e7\u00f5es e ferramentas essenciais</p>
+          <p className="text-sm text-muted-foreground mt-1">Informações e ferramentas essenciais</p>
         </motion.div>
 
-        {/* A\u00e7\u00f5es ativas */}
+        {/* Ações ativas */}
         {acoes?.length > 0 && (
           <section>
-            <h2 className="flex items-center gap-2 text-lg font-bold mb-3"><Flame size={20} className="text-primary" /> A\u00e7\u00f5es Ativas</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold mb-3"><Flame size={20} className="text-primary" /> Ações Ativas</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {acoes?.map?.((acao: any) => {
                 const days = getDaysRemaining(acao?.dataFim);
@@ -84,10 +84,10 @@ export default function CentralClient() {
           </section>
         )}
 
-        {/* Lan\u00e7amentos */}
+        {/* Lançamentos */}
         {lancamentos?.length > 0 && (
           <section>
-            <h2 className="flex items-center gap-2 text-lg font-bold mb-3"><Rocket size={20} className="text-primary" /> Lan\u00e7amentos</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold mb-3"><Rocket size={20} className="text-primary" /> Lançamentos</h2>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
               {lancamentos?.map?.((l: any) => (
                 <motion.div key={l?.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex-shrink-0 w-64 p-4 rounded-xl bg-card" style={{ boxShadow: 'var(--shadow-sm)' }}>
@@ -106,14 +106,14 @@ export default function CentralClient() {
           </section>
         )}
 
-        {/* Links \u00fateis */}
+        {/* Links úteis */}
         {links?.length > 0 && (
           <section>
-            <h2 className="flex items-center gap-2 text-lg font-bold mb-3"><LinkIcon size={20} className="text-primary" /> Links \u00dateis</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold mb-3"><LinkIcon size={20} className="text-primary" /> Links Úteis</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {links?.map?.((link: any) => (
                 <a key={link?.id} href={link?.url ?? '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl bg-card hover:bg-primary/5 transition-colors" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                  <span className="text-2xl">{link?.icone ?? '\uD83D\uDD17'}</span>
+                  <span className="text-2xl">{link?.icone ?? '🔗'}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{link?.titulo ?? ''}</p>
                     <p className="text-xs text-muted-foreground truncate">{link?.descricao ?? ''}</p>
@@ -134,8 +134,8 @@ export default function CentralClient() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted">
-                      <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">M\u00e9todo</th>
-                      <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Condi\u00e7\u00e3o</th>
+                      <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Método</th>
+                      <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Condição</th>
                       <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">Desconto</th>
                       <th className="px-4 py-2.5 text-left font-medium text-muted-foreground hidden sm:table-cell">Obs</th>
                     </tr>
@@ -167,7 +167,7 @@ export default function CentralClient() {
                     onClick={() => setOpenProcedimento(openProcedimento === proc?.id ? null : proc?.id)}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
                   >
-                    <span className="text-xl">{proc?.icone ?? '\uD83D\uDCCB'}</span>
+                    <span className="text-xl">{proc?.icone ?? '📋'}</span>
                     <span className="text-sm font-medium flex-1 text-left">{proc?.titulo ?? ''}</span>
                     {openProcedimento === proc?.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>

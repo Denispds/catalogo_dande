@@ -76,7 +76,7 @@ export default function AdminClient() {
 
   const handleSaveProduct = async () => {
     if (!formData?.codigo || !formData?.nome || !formData?.preco || !formData?.departamentoId || !formData?.categoriaId) {
-      toast.error('Preencha os campos obrigat\u00f3rios'); return;
+      toast.error('Preencha os campos obrigatórios'); return;
     }
     setSaving(true);
     try {
@@ -148,7 +148,7 @@ export default function AdminClient() {
         URL.revokeObjectURL(video.src);
         resolve(video.duration);
       };
-      video.onerror = () => reject(new Error('Erro ao ler v\u00eddeo'));
+      video.onerror = () => reject(new Error('Erro ao ler vídeo'));
       video.src = URL.createObjectURL(file);
     });
   };
@@ -214,7 +214,7 @@ export default function AdminClient() {
         if (isVideo) {
           const duration = await validateVideoDuration(file);
           if (duration > 10) {
-            toast.error(`${file.name}: v\u00eddeo excede 10 segundos (${Math.round(duration)}s)`);
+            toast.error(`${file.name}: vídeo excede 10 segundos (${Math.round(duration)}s)`);
             continue;
           }
         }
@@ -261,7 +261,7 @@ export default function AdminClient() {
   const handleDeleteMedia = async (id: string, codigo: string) => {
     try {
       await fetch(`/api/imagens/${id}`, { method: 'DELETE' });
-      toast.success('M\u00eddia removida');
+      toast.success('Mídia removida');
       fetchProductMedia(codigo);
       fetchProdutos();
     } catch { toast.error('Erro ao remover'); }
@@ -281,7 +281,7 @@ export default function AdminClient() {
   };
 
   const handleCreateColecao = async () => {
-    if (!colForm?.nome) { toast.error('Nome obrigat\u00f3rio'); return; }
+    if (!colForm?.nome) { toast.error('Nome obrigatório'); return; }
     try {
       const res = await fetch('/api/colecoes', {
         method: 'POST',
@@ -289,20 +289,20 @@ export default function AdminClient() {
         body: JSON.stringify(colForm),
       });
       if (res?.ok) {
-        toast.success('Cole\u00e7\u00e3o criada!');
+        toast.success('Coleção criada!');
         setShowColForm(false);
         setColForm({ nome: '', descricao: '', cor: '#E91E8C' });
         const cols = await fetch('/api/colecoes?all=true').then((r: any) => r?.json?.()).catch(() => []);
         setColecoes(cols ?? []);
       }
-    } catch (e: any) { toast.error('Erro ao criar cole\u00e7\u00e3o'); }
+    } catch (e: any) { toast.error('Erro ao criar coleção'); }
   };
 
   const handleDeleteColecao = async (id: string) => {
-    if (!confirm('Deletar cole\u00e7\u00e3o?')) return;
+    if (!confirm('Deletar coleção?')) return;
     try {
       await fetch(`/api/colecoes/${id}`, { method: 'DELETE' });
-      toast.success('Cole\u00e7\u00e3o removida');
+      toast.success('Coleção removida');
       setColecoes(colecoes?.filter?.((c: any) => c?.id !== id) ?? []);
     } catch (e: any) { toast.error('Erro'); }
   };
@@ -324,7 +324,7 @@ export default function AdminClient() {
   const [editColecao, setEditColecao] = useState<any>(null);
 
   const handleEditColecao = async () => {
-    if (!editColecao?.id || !colForm?.nome) { toast.error('Nome obrigat\u00f3rio'); return; }
+    if (!editColecao?.id || !colForm?.nome) { toast.error('Nome obrigatório'); return; }
     try {
       const res = await fetch(`/api/colecoes/${editColecao.id}`, {
         method: 'PUT',
@@ -332,7 +332,7 @@ export default function AdminClient() {
         body: JSON.stringify({ nome: colForm.nome, descricao: colForm.descricao, cor: colForm.cor }),
       });
       if (res?.ok) {
-        toast.success('Cole\u00e7\u00e3o atualizada!');
+        toast.success('Coleção atualizada!');
         setShowColForm(false);
         setEditColecao(null);
         setColForm({ nome: '', descricao: '', cor: '#E91E8C' });
@@ -350,7 +350,7 @@ export default function AdminClient() {
         body: JSON.stringify({ ativa: !currentAtiva }),
       });
       if (res?.ok) {
-        toast.success(!currentAtiva ? 'Cole\u00e7\u00e3o ativada' : 'Cole\u00e7\u00e3o inativada');
+        toast.success(!currentAtiva ? 'Coleção ativada' : 'Coleção inativada');
         setColecoes(prev => prev?.map?.((c: any) => c?.id === id ? { ...c, ativa: !currentAtiva } : c) ?? []);
       }
     } catch (e: any) { toast.error('Erro ao alterar status'); }
@@ -373,7 +373,7 @@ export default function AdminClient() {
               { label: 'Produtos', value: stats?.totalProdutos ?? 0, icon: Package },
               { label: 'Departamentos', value: stats?.totalDepts ?? 0, icon: FolderOpen },
               { label: 'Categorias', value: stats?.totalCats ?? 0, icon: FolderOpen },
-              { label: 'Cole\u00e7\u00f5es', value: stats?.totalColecoes ?? 0, icon: FolderOpen },
+              { label: 'Coleções', value: stats?.totalColecoes ?? 0, icon: FolderOpen },
             ]?.map?.((s: any, i: number) => (
               <div key={i} className="p-3 rounded-xl bg-card flex items-center gap-3" style={{ boxShadow: 'var(--shadow-sm)' }}>
                 <s.icon size={20} className="text-primary" />
@@ -392,7 +392,7 @@ export default function AdminClient() {
             <Package size={14} className="inline mr-1" /> Produtos
           </button>
           <button onClick={() => setActiveTab('colecoes')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'colecoes' ? 'bg-primary text-white' : 'bg-card hover:bg-muted'}`}>
-            <FolderOpen size={14} className="inline mr-1" /> Cole\u00e7\u00f5es
+            <FolderOpen size={14} className="inline mr-1" /> Coleções
           </button>
           <button onClick={() => setActiveTab('drive')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'drive' ? 'bg-primary text-white' : 'bg-card hover:bg-muted'}`}>
             <Upload size={14} className="inline mr-1" /> Drive Sync
@@ -433,11 +433,11 @@ export default function AdminClient() {
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs text-muted-foreground block mb-1">C\u00f3digo *</label>
+                          <label className="text-xs text-muted-foreground block mb-1">Código *</label>
                           <input type="text" value={formData?.codigo ?? ''} onChange={(e: any) => setFormData({ ...formData, codigo: e?.target?.value })} disabled={!!editProduct} className="w-full px-3 py-2 rounded-lg bg-muted text-sm disabled:opacity-50" />
                         </div>
                         <div>
-                          <label className="text-xs text-muted-foreground block mb-1">Pre\u00e7o *</label>
+                          <label className="text-xs text-muted-foreground block mb-1">Preço *</label>
                           <input type="number" step="0.01" value={formData?.preco ?? ''} onChange={(e: any) => setFormData({ ...formData, preco: e?.target?.value })} className="w-full px-3 py-2 rounded-lg bg-muted text-sm" />
                         </div>
                       </div>
@@ -446,7 +446,7 @@ export default function AdminClient() {
                         <input type="text" value={formData?.nome ?? ''} onChange={(e: any) => setFormData({ ...formData, nome: e?.target?.value })} className="w-full px-3 py-2 rounded-lg bg-muted text-sm" />
                       </div>
                       <div>
-                        <label className="text-xs text-muted-foreground block mb-1">Pre\u00e7o Original</label>
+                        <label className="text-xs text-muted-foreground block mb-1">Preço Original</label>
                         <input type="number" step="0.01" value={formData?.precoOriginal ?? ''} onChange={(e: any) => setFormData({ ...formData, precoOriginal: e?.target?.value })} className="w-full px-3 py-2 rounded-lg bg-muted text-sm" />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -494,7 +494,7 @@ export default function AdminClient() {
                                     {m.tipo === 'video' ? (
                                       <video src={m.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                                     ) : (
-                                      <img src={m.url} alt={`M\u00eddia ${idx + 1}`} className="w-full h-full object-cover" />
+                                      <img src={m.url} alt={`Mídia ${idx + 1}`} className="w-full h-full object-cover" />
                                     )}
                                     {m.tipo === 'video' && (
                                       <div className="absolute inset-0 flex items-center justify-center">
@@ -620,7 +620,7 @@ export default function AdminClient() {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-4">
                 <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="p-2 rounded-lg bg-card hover:bg-muted disabled:opacity-30"><ChevronLeft size={16} /></button>
-                <span className="text-sm">P\u00e1gina {page} de {totalPages}</span>
+                <span className="text-sm">Página {page} de {totalPages}</span>
                 <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="p-2 rounded-lg bg-card hover:bg-muted disabled:opacity-30"><ChevronRight size={16} /></button>
               </div>
             )}
@@ -640,9 +640,9 @@ export default function AdminClient() {
               {showColForm && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-4 overflow-hidden">
                   <div className="p-4 rounded-xl bg-card space-y-3" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                    <h3 className="font-bold text-sm">{editColecao ? 'Editar Cole\u00e7\u00e3o' : 'Nova Cole\u00e7\u00e3o'}</h3>
-                    <input type="text" value={colForm?.nome ?? ''} onChange={(e: any) => setColForm({ ...colForm, nome: e?.target?.value })} placeholder="Nome da cole\u00e7\u00e3o" className="w-full px-3 py-2 rounded-lg bg-muted text-sm" />
-                    <input type="text" value={colForm?.descricao ?? ''} onChange={(e: any) => setColForm({ ...colForm, descricao: e?.target?.value })} placeholder="Descri\u00e7\u00e3o" className="w-full px-3 py-2 rounded-lg bg-muted text-sm" />
+                    <h3 className="font-bold text-sm">{editColecao ? 'Editar Coleção' : 'Nova Coleção'}</h3>
+                    <input type="text" value={colForm?.nome ?? ''} onChange={(e: any) => setColForm({ ...colForm, nome: e?.target?.value })} placeholder="Nome da coleção" className="w-full px-3 py-2 rounded-lg bg-muted text-sm" />
+                    <input type="text" value={colForm?.descricao ?? ''} onChange={(e: any) => setColForm({ ...colForm, descricao: e?.target?.value })} placeholder="Descrição" className="w-full px-3 py-2 rounded-lg bg-muted text-sm" />
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-muted-foreground">Cor:</label>
                       <input type="color" value={colForm?.cor ?? '#E91E8C'} onChange={(e: any) => setColForm({ ...colForm, cor: e?.target?.value })} className="w-8 h-8 rounded cursor-pointer" />
@@ -672,18 +672,18 @@ export default function AdminClient() {
                       <button
                         onClick={() => handleToggleColecao(col?.id, col?.ativa !== false)}
                         className={`p-1.5 rounded-lg transition-colors ${col?.ativa !== false ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20' : 'text-muted-foreground hover:bg-muted'}`}
-                        title={col?.ativa !== false ? 'Ativa \u2014 clique para inativar' : 'Inativa \u2014 clique para ativar'}
+                        title={col?.ativa !== false ? 'Ativa — clique para inativar' : 'Inativa — clique para ativar'}
                       >
                         {col?.ativa !== false ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
                       </button>
                       <button
                         onClick={() => { setEditColecao(col); setColForm({ nome: col?.nome ?? '', descricao: col?.descricao ?? '', cor: col?.cor ?? '#E91E8C' }); setShowColForm(true); }}
                         className="p-1.5 rounded-lg hover:bg-primary/10 text-primary"
-                        title="Editar cole\u00e7\u00e3o"
+                        title="Editar coleção"
                       >
                         <Edit3 size={14} />
                       </button>
-                      <button onClick={() => handleDeleteColecao(col?.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive" title="Excluir cole\u00e7\u00e3o">
+                      <button onClick={() => handleDeleteColecao(col?.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive" title="Excluir coleção">
                         <Trash2 size={14} />
                       </button>
                     </div>

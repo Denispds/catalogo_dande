@@ -35,13 +35,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { nome, descricao, cor } = body ?? {};
-    if (!nome) return NextResponse.json({ error: 'Nome obrigat\u00f3rio' }, { status: 400 });
+    if (!nome) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 });
     const colecao = await prisma.catColecao.create({
       data: { nome, descricao: descricao ?? '', cor: cor ?? '#E91E8C', ativa: true },
     });
     return NextResponse.json(colecao, { status: 201 });
   } catch (error: any) {
     console.error('Colecao POST error:', error);
-    return NextResponse.json({ error: 'Erro ao criar cole\u00e7\u00e3o' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao criar coleção' }, { status: 500 });
   }
 }

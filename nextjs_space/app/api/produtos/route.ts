@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { codigo, nome, preco, precoOriginal, departamentoId, categoriaId, subcategoriaId, badges } = body ?? {};
     if (!codigo || !nome || preco === undefined || !departamentoId || !categoriaId) {
-      return NextResponse.json({ error: 'Campos obrigat\u00f3rios faltando' }, { status: 400 });
+      return NextResponse.json({ error: 'Campos obrigatórios faltando' }, { status: 400 });
     }
     const produto = await prisma.catProduto.create({
       data: {

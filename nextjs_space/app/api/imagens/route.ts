@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { produtoCodigo, url, cloudStoragePath, isPublic, principal, tipo, thumbnailUrl } = body ?? {};
     if (!produtoCodigo) {
-      return NextResponse.json({ error: 'C\u00f3digo do produto obrigat\u00f3rio' }, { status: 400 });
+      return NextResponse.json({ error: 'Código do produto obrigatório' }, { status: 400 });
     }
     if (principal) {
       await prisma.catImagem.updateMany({

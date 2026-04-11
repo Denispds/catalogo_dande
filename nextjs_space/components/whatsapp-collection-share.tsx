@@ -17,7 +17,7 @@ export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, show
 
   const buildMessage = () => {
     const parts: string[] = [];
-    parts.push(`\uD83D\uDCE6 *Cole\u00e7\u00e3o: ${colecao?.nome ?? ''}*`);
+    parts.push(`📦 *Coleção: ${colecao?.nome ?? ''}*`);
     if (colecao?.descricao) parts.push(colecao.descricao);
     parts.push('');
     const prods = colecao?.produtos ?? [];
@@ -29,7 +29,7 @@ export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, show
       parts.push(line);
     });
     parts.push('');
-    parts.push('\uD83D\uDECD Dande Acess\u00f3rios');
+    parts.push('🛍 Dande Acessórios');
     return parts.join('\n');
   };
 
@@ -51,7 +51,7 @@ export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, show
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
           <motion.div initial={{ y: 50 }} animate={{ y: 0 }} exit={{ y: 50 }} onClick={(e: any) => e?.stopPropagation?.()} className="bg-card rounded-2xl w-full max-w-md p-5 space-y-4" style={{ boxShadow: 'var(--shadow-lg)' }}>
             <div className="flex items-center justify-between">
-              <h3 className="font-bold">Enviar Cole\u00e7\u00e3o</h3>
+              <h3 className="font-bold">Enviar Coleção</h3>
               <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted"><X size={20} /></button>
             </div>
             <div className="p-3 rounded-xl bg-muted/50 text-xs font-mono whitespace-pre-line max-h-60 overflow-auto">

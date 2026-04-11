@@ -38,15 +38,15 @@ export default function ColecoesClient() {
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-6">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
             <FolderOpen size={24} className="inline text-primary mr-2" />
-            Cole\u00e7\u00f5es <span className="text-primary">Dande</span>
+            Coleções <span className="text-primary">Dande</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Sele\u00e7\u00f5es especiais de produtos</p>
+          <p className="text-sm text-muted-foreground mt-1">Seleções especiais de produtos</p>
         </motion.div>
 
         {colecoes?.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <FolderOpen size={48} className="mx-auto mb-2" />
-            <p>Nenhuma cole\u00e7\u00e3o dispon\u00edvel</p>
+            <p>Nenhuma coleção disponível</p>
           </div>
         ) : (
           <div className="space-y-4">

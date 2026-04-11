@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: { codigo: 
         imagens: { orderBy: { ordem: 'asc' } },
       },
     });
-    if (!produto) return NextResponse.json({ error: 'Produto n\u00e3o encontrado' }, { status: 404 });
+    if (!produto) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
     return NextResponse.json(produto);
   } catch (error: any) {
     console.error('Produto GET error:', error);

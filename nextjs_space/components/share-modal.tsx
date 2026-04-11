@@ -18,18 +18,18 @@ export default function ShareModal({ produto, isOpen, onClose }: ShareModalProps
 
   const buildMessage = () => {
     const parts: string[] = [];
-    parts.push(`\u2728 *${produto?.nome ?? 'Produto'}*`);
-    if (includeCode) parts.push(`\uD83D\uDD16 C\u00f3d: ${produto?.codigo ?? ''}`);
-    if (includeBrand) parts.push(`\uD83C\uDFE2 ${produto?.departamento?.nome ?? ''} > ${produto?.categoria?.nome ?? ''}`);
+    parts.push(`✨ *${produto?.nome ?? 'Produto'}*`);
+    if (includeCode) parts.push(`🔖 Cód: ${produto?.codigo ?? ''}`);
+    if (includeBrand) parts.push(`🏢 ${produto?.departamento?.nome ?? ''} > ${produto?.categoria?.nome ?? ''}`);
     if (includePrice) {
       const hasDiscount = produto?.precoOriginal && produto.precoOriginal > produto?.preco;
       if (hasDiscount) {
-        parts.push(`\uD83D\uDCB0 ~R$ ${(produto?.precoOriginal ?? 0)?.toFixed?.(2)}~ por *R$ ${(produto?.preco ?? 0)?.toFixed?.(2)}*`);
+        parts.push(`💰 ~R$ ${(produto?.precoOriginal ?? 0)?.toFixed?.(2)}~ por *R$ ${(produto?.preco ?? 0)?.toFixed?.(2)}*`);
       } else {
-        parts.push(`\uD83D\uDCB0 *R$ ${(produto?.preco ?? 0)?.toFixed?.(2)}*`);
+        parts.push(`💰 *R$ ${(produto?.preco ?? 0)?.toFixed?.(2)}*`);
       }
     }
-    parts.push('\n\uD83D\uDECD Dande Acess\u00f3rios');
+    parts.push('\n🛍 Dande Acessórios');
     return parts.join('\n');
   };
 

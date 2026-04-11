@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { fileName, contentType, isPublic } = body ?? {};
     if (!fileName || !contentType) {
-      return NextResponse.json({ error: 'fileName e contentType obrigat\u00f3rios' }, { status: 400 });
+      return NextResponse.json({ error: 'fileName e contentType obrigatórios' }, { status: 400 });
     }
     const result = await generatePresignedUploadUrl(fileName, contentType, isPublic ?? true);
     return NextResponse.json(result);

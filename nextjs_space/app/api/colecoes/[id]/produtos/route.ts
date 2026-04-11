@@ -6,7 +6,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   try {
     const body = await request.json();
     const { produtoCodigo } = body ?? {};
-    if (!produtoCodigo) return NextResponse.json({ error: 'C\u00f3digo do produto obrigat\u00f3rio' }, { status: 400 });
+    if (!produtoCodigo) return NextResponse.json({ error: 'Código do produto obrigatório' }, { status: 400 });
     const maxOrdem = await prisma.catColecaoProduto.findFirst({
       where: { colecaoId: params?.id },
       orderBy: { ordem: 'desc' },
@@ -28,7 +28,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const url = new URL(request.url);
     const produtoCodigo = url.searchParams.get('produtoCodigo');
-    if (!produtoCodigo) return NextResponse.json({ error: 'C\u00f3digo obrigat\u00f3rio' }, { status: 400 });
+    if (!produtoCodigo) return NextResponse.json({ error: 'Código obrigatório' }, { status: 400 });
     await prisma.catColecaoProduto.delete({
       where: { colecaoId_produtoCodigo: { colecaoId: params?.id, produtoCodigo } },
     });

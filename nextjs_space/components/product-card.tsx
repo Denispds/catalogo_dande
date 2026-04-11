@@ -201,7 +201,7 @@ export default function ProductCard({
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-1">
             <div className="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
-              <span className="text-lg">\uD83D\uDC8E</span>
+              <span className="text-lg">💎</span>
             </div>
           </div>
         )}
@@ -242,7 +242,7 @@ export default function ProductCard({
           ) : displayUrl && !imgError ? (
             <Image src={displayUrl} alt={produto?.nome ?? 'Produto'} fill className="object-cover" onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} unoptimized />
           ) : (
-            <div className="w-full h-full flex items-center justify-center"><span className="text-lg">\uD83D\uDC8E</span></div>
+            <div className="w-full h-full flex items-center justify-center"><span className="text-lg">💎</span></div>
           )}
           {hasMultipleMedia && (
             <div className="absolute bottom-1 right-1 bg-black/50 text-white text-[8px] px-1.5 py-0.5 rounded-full font-medium">
