@@ -182,7 +182,7 @@ export default function AdminClient() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileName: file.name, contentType: file.type, isPublic: true }),
     });
-    const { uploadUrl, cloud_storage_path } = await presignedRes?.json?.() ?? {};
+    const { uploadUrl, cloud_storage_path, publicUrl } = await presignedRes?.json?.() ?? {};
     if (!uploadUrl) throw new Error('Erro ao gerar URL');
 
     const signedHeaders = new URL(uploadUrl).searchParams.get('X-Amz-SignedHeaders') ?? '';
@@ -191,10 +191,7 @@ export default function AdminClient() {
 
     await fetch(uploadUrl, { method: 'PUT', headers: hdrs, body: file });
 
-    const bucketName = process.env.NEXT_PUBLIC_AWS_BUCKET_NAME ?? '';
-    const region = process.env.NEXT_PUBLIC_AWS_REGION ?? 'us-east-1';
-    const url = `https://${bucketName}.s3.${region}.amazonaws.com/${cloud_storage_path}`;
-    return { url, cloudStoragePath: cloud_storage_path };
+    return { url: publicUrl, cloudStoragePath: cloud_storage_path };
   };
 
   const uploadThumbnailBlob = async (dataUrl: string): Promise<{ url: string; cloudStoragePath: string }> => {
