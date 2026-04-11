@@ -16,7 +16,7 @@ const BADGES_OPTIONS = ['garantia', 'novo', 'pronta entrega'];
 export default function AdminClient() {
   const { data: session, status } = useSession() || {};
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'produtos' | 'colecoes'>('produtos');
+  const [activeTab, setActiveTab] = useState<'produtos' | 'colecoes' | 'drive'>('produtos');
   const [produtos, setProdutos] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -34,6 +34,8 @@ export default function AdminClient() {
   const [showColForm, setShowColForm] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [stats, setStats] = useState<any>({});
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
