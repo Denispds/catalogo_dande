@@ -50,8 +50,9 @@ export default function Header() {
       </header>
 
       {/* Bottom navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border/50 pb-[env(safe-area-inset-bottom)]">
-        <div className="max-w-lg mx-auto flex items-center justify-around px-2 py-1.5">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border/50"
+           style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom, 0px))' }}>
+        <div className="max-w-lg mx-auto flex items-center justify-around px-2 pt-2 pb-1">
           {navItems.map((item) => {
             const isActive = item.href === '/' ? pathname === '/' : pathname?.startsWith(item.href);
             return (
