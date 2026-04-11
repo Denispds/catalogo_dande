@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, Edit3, Trash2, Save, X, Loader2, Package, LayoutDashboard,
-  FolderOpen, ChevronLeft, ChevronRight, Upload, Image as ImageIcon
+  FolderOpen, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, BookOpen, ChevronDown
 } from 'lucide-react';
 
 const BADGES_OPTIONS = ['garantia', 'novo', 'pronta entrega'];
@@ -36,6 +36,7 @@ export default function AdminClient() {
   const [stats, setStats] = useState<any>({});
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
@@ -460,6 +461,159 @@ export default function AdminClient() {
                 {syncLoading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
                 {syncLoading ? 'Sincronizando...' : 'Iniciar Sincronização'}
               </button>
+            </div>
+
+            {/* Guia de Uso */}
+            <div className="rounded-xl bg-card overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+              <button
+                onClick={() => setShowGuide(!showGuide)}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen size={16} className="text-primary" />
+                  <span className="font-bold text-sm">📖 Guia: Como Inserir Imagens no Drive</span>
+                </div>
+                <ChevronDown size={16} className={`text-muted-foreground transition-transform ${showGuide ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {showGuide && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4 space-y-4 text-sm text-foreground/90">
+
+                      {/* Seção 1 - Pasta */}
+                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
+                        <h4 className="font-bold text-primary mb-1.5 flex items-center gap-1.5">📁 Onde Colocar as Imagens?</h4>
+                        <p className="text-xs leading-relaxed mb-2">
+                          Coloque as imagens dentro da <strong>pasta compartilhada do Google Drive</strong> ou em qualquer <strong>subpasta</strong> dentro dela.
+                        </p>
+                        <div className="text-xs bg-card rounded-lg p-2.5 font-mono space-y-0.5">
+                          <div>📂 <strong>Pasta Principal do Drive</strong></div>
+                          <div className="ml-4">├── 📷 119157-1.png ✅</div>
+                          <div className="ml-4">├── 📷 187500.png ✅</div>
+                          <div className="ml-4">├── 📂 Abril 2026/</div>
+                          <div className="ml-8">│&nbsp;&nbsp; ├── 📷 180420.jpg ✅</div>
+                          <div className="ml-8">│&nbsp;&nbsp; └── 📷 119858-2.png ✅</div>
+                          <div className="ml-4">└── 📂 <span className="text-yellow-600">Concluidas/</span> ⛔ (não mexer)</div>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          ⚠️ <strong>Não coloque imagens na pasta &quot;Concluidas&quot;</strong> — ela é usada automaticamente para guardar os arquivos já processados.
+                        </p>
+                      </div>
+
+                      {/* Seção 2 - Nomenclatura */}
+                      <div className="p-3 rounded-lg bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30">
+                        <h4 className="font-bold text-blue-700 dark:text-blue-400 mb-1.5 flex items-center gap-1.5">✏️ Como Nomear os Arquivos</h4>
+                        <p className="text-xs leading-relaxed mb-2">
+                          O nome do arquivo <strong>deve começar com o código do produto</strong> (4 a 7 dígitos). O sistema extrai automaticamente o código.
+                        </p>
+                        <div className="space-y-1.5">
+                          <div className="text-xs font-medium text-muted-foreground">✅ Formatos aceitos:</div>
+                          <div className="grid gap-1">
+                            {[
+                              { ex: '119157-1.png', desc: 'Código + hífen + número da foto' },
+                              { ex: '119157.png', desc: 'Só o código' },
+                              { ex: '187500.Mídia.152908.png', desc: 'Código + descrição extra' },
+                              { ex: '180420 (1).png', desc: 'Código + espaço + variação' },
+                              { ex: 'Colar - 187580.png', desc: 'Descrição - Código' },
+                            ].map((item, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs bg-card rounded-lg px-2.5 py-1.5">
+                                <code className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded font-mono text-[11px] shrink-0">{item.ex}</code>
+                                <span className="text-muted-foreground">{item.desc}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="mt-3 space-y-1.5">
+                          <div className="text-xs font-medium text-muted-foreground">❌ Formatos que NÃO funcionam:</div>
+                          <div className="grid gap-1">
+                            {[
+                              { ex: 'IMG-20260409-WA0006.jpg', desc: 'Nome automático do WhatsApp' },
+                              { ex: 'IMG_7662.JPG', desc: 'Nome automático da câmera' },
+                              { ex: 'Colar nossa senhora.png', desc: 'Só descrição, sem código' },
+                              { ex: 'foto produto.heic', desc: 'Formato HEIC do iPhone' },
+                            ].map((item, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs bg-card rounded-lg px-2.5 py-1.5">
+                                <code className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-mono text-[11px] shrink-0">{item.ex}</code>
+                                <span className="text-muted-foreground">{item.desc}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Seção 3 - Múltiplas fotos */}
+                      <div className="p-3 rounded-lg bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/30">
+                        <h4 className="font-bold text-purple-700 dark:text-purple-400 mb-1.5 flex items-center gap-1.5">📸 Várias Fotos por Produto</h4>
+                        <p className="text-xs leading-relaxed mb-1.5">
+                          Você pode adicionar <strong>múltiplas fotos</strong> para o mesmo produto. Basta usar o mesmo código no início do nome:
+                        </p>
+                        <div className="text-xs bg-card rounded-lg p-2.5 font-mono space-y-0.5">
+                          <div>📷 <strong>119157</strong>-1.png → foto 1 (será a principal)</div>
+                          <div>📷 <strong>119157</strong>-2.png → foto 2</div>
+                          <div>📷 <strong>119157</strong>-3.png → foto 3</div>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          💡 A <strong>primeira imagem importada</strong> de cada produto é automaticamente marcada como <strong>foto principal</strong> do catálogo.
+                        </p>
+                      </div>
+
+                      {/* Seção 4 - Formatos */}
+                      <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30">
+                        <h4 className="font-bold text-amber-700 dark:text-amber-400 mb-1.5 flex items-center gap-1.5">🖼️ Formatos de Imagem</h4>
+                        <div className="grid grid-cols-2 gap-1.5 text-xs">
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-card"><span className="text-green-500">✅</span> .PNG</div>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-card"><span className="text-green-500">✅</span> .JPG / .JPEG</div>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-card"><span className="text-green-500">✅</span> .WEBP</div>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-card"><span className="text-green-500">✅</span> .GIF</div>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-card"><span className="text-red-500">❌</span> .HEIC / .HEIF</div>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-card"><span className="text-red-500">❌</span> .PDF / .MP4</div>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          📱 <strong>Fotos do iPhone</strong> costumam ser salvas em .HEIC. Antes de enviar, converta para .JPG ou .PNG.
+                        </p>
+                      </div>
+
+                      {/* Seção 5 - Passo a Passo */}
+                      <div className="p-3 rounded-lg bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/30">
+                        <h4 className="font-bold text-green-700 dark:text-green-400 mb-1.5 flex items-center gap-1.5">🚀 Passo a Passo Resumido</h4>
+                        <ol className="text-xs space-y-2 list-none">
+                          {[
+                            { n: '1', text: 'Renomeie o arquivo com o código do produto no início (ex: 119157-1.png)' },
+                            { n: '2', text: 'Faça upload na pasta compartilhada do Google Drive (ou subpasta)' },
+                            { n: '3', text: 'Acesse o painel Admin → aba Drive Sync' },
+                            { n: '4', text: 'Clique em "Iniciar Sincronização"' },
+                            { n: '5', text: 'Confira o relatório — imagens importadas aparecem em verde ✅' },
+                          ].map(step => (
+                            <li key={step.n} className="flex items-start gap-2">
+                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[11px] font-bold shrink-0">{step.n}</span>
+                              <span>{step.text}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+
+                      {/* Seção 6 - Observações */}
+                      <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                        <h4 className="font-bold mb-1.5 flex items-center gap-1.5">⚠️ Observações Importantes</h4>
+                        <ul className="text-xs space-y-1.5 list-none">
+                          <li className="flex items-start gap-1.5"><span>•</span> O código do produto <strong>precisa existir no sistema</strong>. Imagens com código não cadastrado serão puladas.</li>
+                          <li className="flex items-start gap-1.5"><span>•</span> Imagens já importadas <strong>não serão duplicadas</strong> (o sistema reconhece pelo ID do arquivo no Drive).</li>
+                          <li className="flex items-start gap-1.5"><span>•</span> Após a sincronização, os arquivos processados são <strong>movidos automaticamente</strong> para a pasta &quot;Concluidas&quot;.</li>
+                          <li className="flex items-start gap-1.5"><span>•</span> Se uma imagem aparecer como &quot;pulada&quot;, verifique se o nome do arquivo contém o código correto.</li>
+                          <li className="flex items-start gap-1.5"><span>•</span> Para <strong>substituir</strong> uma imagem, exclua a antiga no painel de produto e faça upload de uma nova no Drive.</li>
+                        </ul>
+                      </div>
+
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {syncResult && !syncResult.error && (
