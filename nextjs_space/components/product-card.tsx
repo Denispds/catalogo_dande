@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Share2, Check, Play } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Share2, Check, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 
 interface MediaItem {
@@ -42,8 +42,8 @@ export default function ProductCard({
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [activeImgIdx, setActiveImgIdx] = useState(0);
-  const timerRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const media: MediaItem[] = produto?.imagens ?? [];
   const hasMultipleMedia = media.length > 1;
@@ -53,42 +53,25 @@ export default function ProductCard({
 
   const fmt = (v: number) => `R$ ${v?.toFixed(2)?.replace('.', ',')}`;
 
-  // Auto-rotate media every 3s (pause on video)
-  const startRotation = useCallback(() => {
-    if (!hasMultipleMedia) return;
-    timerRef.current = setInterval(() => {
-      setActiveImgIdx((prev) => (prev + 1) % media.length);
-    }, 3000);
-  }, [hasMultipleMedia, media.length]);
+  const goNext = () => setActiveImgIdx((prev) => (prev + 1) % media.length);
+  const goPrev = () => setActiveImgIdx((prev) => (prev - 1 + media.length) % media.length);
 
-  const stopRotation = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+  // Swipe handling for touch devices
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || !hasMultipleMedia) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    // Only handle horizontal swipes (ignore vertical scrolling)
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) goNext();
+      else goPrev();
     }
-  }, []);
-
-  useEffect(() => {
-    if (isVideo) {
-      stopRotation();
-    } else {
-      startRotation();
-    }
-    return stopRotation;
-  }, [startRotation, stopRotation, isVideo, activeImgIdx]);
-
-  // When video ends, advance to next
-  useEffect(() => {
-    const vid = videoRef.current;
-    if (!vid || !isVideo) return;
-    const onEnded = () => {
-      if (hasMultipleMedia) {
-        setActiveImgIdx((prev) => (prev + 1) % media.length);
-      }
-    };
-    vid.addEventListener('ended', onEnded);
-    return () => vid.removeEventListener('ended', onEnded);
-  }, [isVideo, hasMultipleMedia, media.length, activeImgIdx]);
+    touchStartRef.current = null;
+  };
 
   const handleTap = () => {
     if (selectionMode && onSelect) {
@@ -109,7 +92,6 @@ export default function ProductCard({
 
   const handleDotClick = (e: React.MouseEvent, idx: number) => {
     e.stopPropagation();
-    stopRotation();
     setActiveImgIdx(idx);
   };
 
@@ -149,11 +131,37 @@ export default function ProductCard({
     );
   };
 
+  // Navigation arrows (visible on hover / desktop)
+  const NavArrows = () => {
+    if (!hasMultipleMedia) return null;
+    return (
+      <>
+        <button
+          onClick={(e) => { e.stopPropagation(); goPrev(); }}
+          className="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 backdrop-blur-sm text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-black/60 active:scale-90 z-10"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); goNext(); }}
+          className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 backdrop-blur-sm text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-black/60 active:scale-90 z-10"
+        >
+          <ChevronRight size={14} />
+        </button>
+      </>
+    );
+  };
+
   // Video or Image renderer
   const MediaRenderer = ({ aspectClass, objectFit = 'object-cover' }: { aspectClass: string; objectFit?: string }) => {
     if (isVideo) {
       return (
-        <div className={`relative ${aspectClass} bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer`} onClick={handleImageTap}>
+        <div
+          className={`relative ${aspectClass} bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer`}
+          onClick={handleImageTap}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <video
             ref={videoRef}
             src={current?.url}
@@ -164,6 +172,7 @@ export default function ProductCard({
             loop={!hasMultipleMedia}
           />
           <MediaCount />
+          <NavArrows />
           <MediaIndicators />
           {onShare && !selectionMode && (
             <button
@@ -178,14 +187,19 @@ export default function ProductCard({
     }
 
     return (
-      <div className={`relative ${aspectClass} bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer`} onClick={handleImageTap}>
+      <div
+        className={`relative ${aspectClass} bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden cursor-pointer`}
+        onClick={handleImageTap}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {displayUrl && !imgError ? (
           <>
             <Image
               src={displayUrl}
               alt={produto?.nome ?? 'Produto Dande'}
               fill
-              className={`${objectFit} transition-all duration-700 ease-out group-hover:scale-105 ${
+              className={`${objectFit} transition-all duration-500 ease-out group-hover:scale-105 ${
                 imgLoaded ? 'opacity-100' : 'opacity-0'
               }`}
               onLoad={() => setImgLoaded(true)}
@@ -206,6 +220,7 @@ export default function ProductCard({
           </div>
         )}
         <MediaCount />
+        <NavArrows />
         <MediaIndicators />
         {onShare && !selectionMode && (
           <button
@@ -236,7 +251,12 @@ export default function ProductCard({
           </div>
         )}
 
-        <div className="relative w-24 h-24 flex-shrink-0 bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 cursor-pointer overflow-hidden" onClick={handleImageTap}>
+        <div
+          className="relative w-24 h-24 flex-shrink-0 bg-gradient-to-br from-pink-50 to-gray-50 dark:from-gray-800 dark:to-gray-900 cursor-pointer overflow-hidden"
+          onClick={handleImageTap}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           {isVideo ? (
             <video src={current?.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
           ) : displayUrl && !imgError ? (
