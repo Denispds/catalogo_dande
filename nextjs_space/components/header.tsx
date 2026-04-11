@@ -22,7 +22,8 @@ export default function Header() {
     <>
       {/* Top bar with logo */}
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-lg mx-auto px-5 h-14 flex items-center justify-center">
+        <div className="max-w-lg mx-auto px-5 h-14 flex items-center justify-between">
+          <div className="w-9" />
           <Link href="/" className="flex items-center gap-2.5">
             <div className="relative w-9 h-9">
               <Image
@@ -37,6 +38,13 @@ export default function Header() {
               <span className="font-bold text-base leading-tight tracking-tight">Dande</span>
               <span className="text-[10px] text-muted-foreground leading-tight -mt-0.5">Acessórios</span>
             </div>
+          </Link>
+          <Link
+            href="/admin"
+            className="w-9 h-9 flex items-center justify-center rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+            title="Painel Admin"
+          >
+            <Settings size={18} strokeWidth={1.8} />
           </Link>
         </div>
       </header>

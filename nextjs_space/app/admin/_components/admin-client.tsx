@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, Edit3, Trash2, Save, X, Loader2, Package, LayoutDashboard,
-  FolderOpen, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, BookOpen, ChevronDown
+  FolderOpen, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, BookOpen, ChevronDown,
+  ToggleLeft, ToggleRight, Eye, EyeOff
 } from 'lucide-react';
 
 const BADGES_OPTIONS = ['garantia', 'novo', 'pronta entrega'];
@@ -63,7 +64,7 @@ export default function AdminClient() {
     Promise.all([
       fetch('/api/departamentos').then((r: any) => r?.json?.()).catch(() => []),
       fetch('/api/categorias').then((r: any) => r?.json?.()).catch(() => []),
-      fetch('/api/colecoes').then((r: any) => r?.json?.()).catch(() => []),
+      fetch('/api/colecoes?all=true').then((r: any) => r?.json?.()).catch(() => []),
       fetch('/api/stats').then((r: any) => r?.json?.()).catch(() => ({})),
     ]).then(([deps, cats, cols, st]: any) => {
       setDepartamentos(deps ?? []);
@@ -170,7 +171,7 @@ export default function AdminClient() {
         toast.success('Cole\u00e7\u00e3o criada!');
         setShowColForm(false);
         setColForm({ nome: '', descricao: '', cor: '#E91E8C' });
-        const cols = await fetch('/api/colecoes').then((r: any) => r?.json?.()).catch(() => []);
+        const cols = await fetch('/api/colecoes?all=true').then((r: any) => r?.json?.()).catch(() => []);
         setColecoes(cols ?? []);
       }
     } catch (e: any) { toast.error('Erro ao criar cole\u00e7\u00e3o'); }
@@ -183,6 +184,55 @@ export default function AdminClient() {
       toast.success('Cole\u00e7\u00e3o removida');
       setColecoes(colecoes?.filter?.((c: any) => c?.id !== id) ?? []);
     } catch (e: any) { toast.error('Erro'); }
+  };
+
+  const handleToggleAtivo = async (codigo: string, currentAtivo: boolean) => {
+    try {
+      const res = await fetch(`/api/produtos/${codigo}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativo: !currentAtivo }),
+      });
+      if (res?.ok) {
+        toast.success(!currentAtivo ? 'Produto ativado' : 'Produto inativado');
+        setProdutos(prev => prev?.map?.((p: any) => p?.codigo === codigo ? { ...p, ativo: !currentAtivo } : p) ?? []);
+      }
+    } catch (e: any) { toast.error('Erro ao alterar status'); }
+  };
+
+  const [editColecao, setEditColecao] = useState<any>(null);
+
+  const handleEditColecao = async () => {
+    if (!editColecao?.id || !colForm?.nome) { toast.error('Nome obrigat\u00f3rio'); return; }
+    try {
+      const res = await fetch(`/api/colecoes/${editColecao.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: colForm.nome, descricao: colForm.descricao, cor: colForm.cor }),
+      });
+      if (res?.ok) {
+        toast.success('Cole\u00e7\u00e3o atualizada!');
+        setShowColForm(false);
+        setEditColecao(null);
+        setColForm({ nome: '', descricao: '', cor: '#E91E8C' });
+        const cols = await fetch('/api/colecoes?all=true').then((r: any) => r?.json?.()).catch(() => []);
+        setColecoes(cols ?? []);
+      }
+    } catch (e: any) { toast.error('Erro ao atualizar'); }
+  };
+
+  const handleToggleColecao = async (id: string, currentAtiva: boolean) => {
+    try {
+      const res = await fetch(`/api/colecoes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativa: !currentAtiva }),
+      });
+      if (res?.ok) {
+        toast.success(!currentAtiva ? 'Cole\u00e7\u00e3o ativada' : 'Cole\u00e7\u00e3o inativada');
+        setColecoes(prev => prev?.map?.((c: any) => c?.id === id ? { ...c, ativa: !currentAtiva } : c) ?? []);
+      }
+    } catch (e: any) { toast.error('Erro ao alterar status'); }
   };
 
   if (status === 'loading') {
@@ -343,20 +393,30 @@ export default function AdminClient() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-muted">
-                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">C\u00f3digo</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">C&#243;digo</th>
                         <th className="px-3 py-2 text-left font-medium text-muted-foreground">Nome</th>
                         <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden md:table-cell">Dept</th>
-                        <th className="px-3 py-2 text-right font-medium text-muted-foreground">Pre\u00e7o</th>
-                        <th className="px-3 py-2 text-center font-medium text-muted-foreground">A\u00e7\u00f5es</th>
+                        <th className="px-3 py-2 text-right font-medium text-muted-foreground">Pre&#231;o</th>
+                        <th className="px-3 py-2 text-center font-medium text-muted-foreground">Status</th>
+                        <th className="px-3 py-2 text-center font-medium text-muted-foreground">A&#231;&#245;es</th>
                       </tr>
                     </thead>
                     <tbody>
                       {produtos?.map?.((p: any) => (
-                        <tr key={p?.codigo} className="border-t border-border hover:bg-muted/30">
+                        <tr key={p?.codigo} className={`border-t border-border hover:bg-muted/30 ${p?.ativo === false ? 'opacity-50' : ''}`}>
                           <td className="px-3 py-2 font-mono text-xs">{p?.codigo}</td>
                           <td className="px-3 py-2 truncate max-w-[200px]">{p?.nome ?? ''}</td>
                           <td className="px-3 py-2 text-muted-foreground hidden md:table-cell">{p?.departamento?.nome ?? ''}</td>
                           <td className="px-3 py-2 text-right font-medium text-primary">R$ {(p?.preco ?? 0)?.toFixed?.(2)}</td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => handleToggleAtivo(p?.codigo, p?.ativo !== false)}
+                              className={`p-1.5 rounded-lg transition-colors ${p?.ativo !== false ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20' : 'text-muted-foreground hover:bg-muted'}`}
+                              title={p?.ativo !== false ? 'Ativo — clique para inativar' : 'Inativo — clique para ativar'}
+                            >
+                              {p?.ativo !== false ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                            </button>
+                          </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center justify-center gap-1">
                               <button onClick={() => handleEdit(p)} className="p-1.5 rounded-lg hover:bg-primary/10 text-primary"><Edit3 size={14} /></button>
@@ -385,9 +445,9 @@ export default function AdminClient() {
         {activeTab === 'colecoes' && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold">Cole\u00e7\u00f5es ({colecoes?.length ?? 0})</h2>
-              <button onClick={() => setShowColForm(!showColForm)} className="flex items-center gap-1 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90">
-                <Plus size={16} /> Nova Cole\u00e7\u00e3o
+              <h2 className="font-bold">Cole&#231;&#245;es ({colecoes?.length ?? 0})</h2>
+              <button onClick={() => { setShowColForm(true); setEditColecao(null); setColForm({ nome: '', descricao: '', cor: '#E91E8C' }); }} className="flex items-center gap-1 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90">
+                <Plus size={16} /> Nova Cole&#231;&#227;o
               </button>
             </div>
 
@@ -395,6 +455,7 @@ export default function AdminClient() {
               {showColForm && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-4 overflow-hidden">
                   <div className="p-4 rounded-xl bg-card space-y-3" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                    <h3 className="font-bold text-sm">{editColecao ? 'Editar Cole\u00e7\u00e3o' : 'Nova Cole\u00e7\u00e3o'}</h3>
                     <input type="text" value={colForm?.nome ?? ''} onChange={(e: any) => setColForm({ ...colForm, nome: e?.target?.value })} placeholder="Nome da cole\u00e7\u00e3o" className="w-full px-3 py-2 rounded-lg bg-muted text-sm" />
                     <input type="text" value={colForm?.descricao ?? ''} onChange={(e: any) => setColForm({ ...colForm, descricao: e?.target?.value })} placeholder="Descri\u00e7\u00e3o" className="w-full px-3 py-2 rounded-lg bg-muted text-sm" />
                     <div className="flex items-center gap-2">
@@ -402,8 +463,10 @@ export default function AdminClient() {
                       <input type="color" value={colForm?.cor ?? '#E91E8C'} onChange={(e: any) => setColForm({ ...colForm, cor: e?.target?.value })} className="w-8 h-8 rounded cursor-pointer" />
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => setShowColForm(false)} className="px-4 py-2 rounded-xl bg-muted text-sm">Cancelar</button>
-                      <button onClick={handleCreateColecao} className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium">Criar</button>
+                      <button onClick={() => { setShowColForm(false); setEditColecao(null); }} className="px-4 py-2 rounded-xl bg-muted text-sm">Cancelar</button>
+                      <button onClick={editColecao ? handleEditColecao : handleCreateColecao} className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium">
+                        {editColecao ? 'Salvar' : 'Criar'}
+                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -412,14 +475,33 @@ export default function AdminClient() {
 
             <div className="space-y-3">
               {colecoes?.map?.((col: any) => (
-                <motion.div key={col?.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl bg-card" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                <motion.div key={col?.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`p-4 rounded-xl bg-card ${col?.ativa === false ? 'opacity-50' : ''}`} style={{ boxShadow: 'var(--shadow-sm)' }}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: col?.cor ?? '#E91E8C' }} />
-                      <h3 className="font-bold text-sm">{col?.nome ?? ''}</h3>
-                      <span className="text-xs text-muted-foreground">({col?.produtos?.length ?? 0} produtos)</span>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: col?.cor ?? '#E91E8C' }} />
+                      <h3 className="font-bold text-sm truncate">{col?.nome ?? ''}</h3>
+                      <span className="text-xs text-muted-foreground shrink-0">({col?.produtos?.length ?? 0} produtos)</span>
+                      {col?.ativa === false && <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">inativa</span>}
                     </div>
-                    <button onClick={() => handleDeleteColecao(col?.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive"><Trash2 size={14} /></button>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <button
+                        onClick={() => handleToggleColecao(col?.id, col?.ativa !== false)}
+                        className={`p-1.5 rounded-lg transition-colors ${col?.ativa !== false ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20' : 'text-muted-foreground hover:bg-muted'}`}
+                        title={col?.ativa !== false ? 'Ativa \u2014 clique para inativar' : 'Inativa \u2014 clique para ativar'}
+                      >
+                        {col?.ativa !== false ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                      </button>
+                      <button
+                        onClick={() => { setEditColecao(col); setColForm({ nome: col?.nome ?? '', descricao: col?.descricao ?? '', cor: col?.cor ?? '#E91E8C' }); setShowColForm(true); }}
+                        className="p-1.5 rounded-lg hover:bg-primary/10 text-primary"
+                        title="Editar cole\u00e7\u00e3o"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button onClick={() => handleDeleteColecao(col?.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive" title="Excluir cole\u00e7\u00e3o">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                   {col?.descricao && <p className="text-xs text-muted-foreground mt-1">{col.descricao}</p>}
                 </motion.div>
