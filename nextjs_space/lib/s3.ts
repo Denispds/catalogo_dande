@@ -1,4 +1,4 @@
-import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand, type PutObjectCommandInput } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createS3Client, getBucketConfig } from './aws-config';
 
@@ -38,4 +38,27 @@ export async function getFileUrl(cloud_storage_path: string, isPublic: boolean) 
 export async function deleteFile(cloud_storage_path: string) {
   const command = new DeleteObjectCommand({ Bucket: bucketName, Key: cloud_storage_path });
   await s3.send(command);
+}
+
+export async function uploadBuffer(
+  buffer: Buffer | Uint8Array,
+  fileName: string,
+  contentType: string,
+  isPublic: boolean = true
+) {
+  const prefix = isPublic ? `${folderPrefix}public/uploads` : `${folderPrefix}uploads`;
+  const cloud_storage_path = `${prefix}/${Date.now()}-${fileName}`;
+  const params: PutObjectCommandInput = {
+    Bucket: bucketName,
+    Key: cloud_storage_path,
+    Body: buffer,
+    ContentType: contentType,
+    ContentDisposition: isPublic ? 'attachment' : undefined,
+  };
+  await s3.send(new PutObjectCommand(params));
+  const region = process.env.AWS_REGION ?? 'us-east-1';
+  const url = isPublic
+    ? `https://${bucketName}.s3.${region}.amazonaws.com/${cloud_storage_path}`
+    : cloud_storage_path;
+  return { url, cloud_storage_path };
 }

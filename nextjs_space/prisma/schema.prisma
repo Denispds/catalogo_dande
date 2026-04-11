@@ -89,11 +89,13 @@ model CatImagem {
   isPublic       Boolean  @default(true) @map("is_public")
   principal      Boolean  @default(false)
   ordem          Int      @default(0)
+  driveFileId    String?  @map("drive_file_id")
   createdAt      DateTime @default(now()) @map("created_at")
 
   produto        CatProduto @relation(fields: [produtoCodigo], references: [codigo], onDelete: Cascade)
 
   @@index([produtoCodigo])
+  @@index([driveFileId])
   @@map("cat_imagens")
 }
 
