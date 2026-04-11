@@ -222,6 +222,9 @@ export default function AdminClient() {
           <button onClick={() => setActiveTab('colecoes')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'colecoes' ? 'bg-primary text-white' : 'bg-card hover:bg-muted'}`}>
             <FolderOpen size={14} className="inline mr-1" /> Cole\u00e7\u00f5es
           </button>
+          <button onClick={() => setActiveTab('drive')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'drive' ? 'bg-primary text-white' : 'bg-card hover:bg-muted'}`}>
+            <Upload size={14} className="inline mr-1" /> Drive Sync
+          </button>
         </div>
 
         {activeTab === 'produtos' && (
@@ -423,6 +426,98 @@ export default function AdminClient() {
             </div>
           </div>
         )}
+
+        {activeTab === 'drive' && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-card" style={{ boxShadow: 'var(--shadow-sm)' }}>
+              <h2 className="font-bold mb-2">Sincronizar Imagens do Google Drive</h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                Busca imagens na pasta do Drive, extrai o código do produto pelo nome do arquivo,
+                faz upload para o S3 e vincula ao produto. Arquivos processados são movidos para a pasta &quot;Concluidas&quot;.
+              </p>
+              <button
+                onClick={async () => {
+                  if (syncLoading) return;
+                  setSyncLoading(true);
+                  setSyncResult(null);
+                  try {
+                    const res = await fetch('/api/sync-drive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moveToConclued: true }) });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || 'Erro');
+                    setSyncResult(data);
+                    toast.success(`Sincronização concluída: ${data.added} importadas`);
+                    fetchProdutos();
+                  } catch (err: any) {
+                    toast.error(err.message || 'Erro na sincronização');
+                    setSyncResult({ error: err.message });
+                  } finally {
+                    setSyncLoading(false);
+                  }
+                }}
+                disabled={syncLoading}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {syncLoading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                {syncLoading ? 'Sincronizando...' : 'Iniciar Sincronização'}
+              </button>
+            </div>
+
+            {syncResult && !syncResult.error && (
+              <div className="p-4 rounded-xl bg-card space-y-3" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                <h3 className="font-bold text-sm">Resultado</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="p-3 rounded-lg bg-muted">
+                    <div className="text-lg font-bold">{syncResult.total}</div>
+                    <div className="text-xs text-muted-foreground">Total</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                    <div className="text-lg font-bold text-green-600">{syncResult.added}</div>
+                    <div className="text-xs text-muted-foreground">Importadas</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
+                    <div className="text-lg font-bold text-yellow-600">{syncResult.skipped}</div>
+                    <div className="text-xs text-muted-foreground">Puladas</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
+                    <div className="text-lg font-bold text-red-600">{syncResult.errors}</div>
+                    <div className="text-xs text-muted-foreground">Erros</div>
+                  </div>
+                </div>
+
+                {syncResult.details?.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">Detalhes ({syncResult.details.length} arquivos)</h4>
+                    <div className="max-h-64 overflow-y-auto space-y-1">
+                      {syncResult.details.map((d: any, i: number) => (
+                        <div key={i} className={`text-xs px-2 py-1.5 rounded-lg flex items-center justify-between ${
+                          d.status === 'importado' ? 'bg-green-50 dark:bg-green-900/10' :
+                          d.status === 'erro' ? 'bg-red-50 dark:bg-red-900/10' :
+                          'bg-muted'
+                        }`}>
+                          <span className="truncate mr-2 flex-1">{d.file}</span>
+                          <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-medium ${
+                            d.status === 'importado' ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200' :
+                            d.status === 'erro' ? 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200' :
+                            'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                          }`}>
+                            {d.status}{d.code ? ` (${d.code})` : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {syncResult?.error && (
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm">
+                <strong>Erro:</strong> {syncResult.error}
+              </div>
+            )}
+          </div>
+        )}
+
       </main>
     </div>
   );
