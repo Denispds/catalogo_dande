@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         include: {
           departamento: true,
           categoria: true,
-          imagens: { where: { principal: true }, take: 1 },
+          imagens: { orderBy: [{ principal: 'desc' }, { ordem: 'asc' }] },
         },
       }),
     ]);
