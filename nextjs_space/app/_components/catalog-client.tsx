@@ -41,6 +41,7 @@ export default function CatalogClient() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [hideInfoOnExport, setHideInfoOnExport] = useState(false);
+  const [exportColumns, setExportColumns] = useState<1 | 2>(2);
 
   // Lightbox state
   const [lightboxImages, setLightboxImages] = useState<{ url: string }[]>([]);
@@ -188,23 +189,28 @@ export default function CatalogClient() {
 
   const allPageSelected = produtos.length > 0 && produtos.every((p: any) => selectedCodes.has(p?.codigo));
 
-  const buildCardHtml = (p: any, showInfo: boolean) => {
-    const img = p?.imagens?.[0]?.url;
+  const buildCardHtml = (p: any, showInfo: boolean, cols: number) => {
+    const imagens = p?.imagens ?? [];
     const nome = (p?.nome ?? '').trim().split(/\s+/).slice(0, 2).join(' ');
     const preco = `R$ ${(p?.preco ?? 0).toFixed(2).replace('.', ',')}`;
-    const imgHtml = img
-      ? `<img src="${img}" alt="${nome}">`
-      : '<div style="aspect-ratio:1;background:#f0e0f0;display:flex;align-items:center;justify-content:center;font-size:32px">💎</div>';
-    if (!showInfo) return `<div class="card">${imgHtml}</div>`;
-    return `<div class="card">${imgHtml}<div class="info"><div class="name">${nome}</div><div class="code">${p?.codigo ?? ''}</div><div class="price">${preco}</div></div></div>`;
+    const aspectRatio = cols === 1 ? '3/4' : '4/5';
+
+    const imgsHtml = imagens.length > 0
+      ? imagens.map((img: any) =>
+          `<img src="${img.url}" alt="${nome}" style="width:100%;aspect-ratio:${aspectRatio};object-fit:cover;background:#f5f5f5;display:block;${!showInfo && imagens.length === 1 ? 'border-radius:12px;' : ''}">`
+        ).join('\n')
+      : `<div style="aspect-ratio:${aspectRatio};background:#f0e0f0;display:flex;align-items:center;justify-content:center;font-size:32px">💎</div>`;
+
+    const infoHtml = showInfo
+      ? `<div class="info"><div class="name">${nome}</div><div class="code">${p?.codigo ?? ''}</div><div class="price">${preco}</div></div>`
+      : '';
+
+    return `<div class="card">${imgsHtml}${infoHtml}</div>`;
   };
 
-  const exportSelected = () => {
-    const selected = produtos.filter((p: any) => selectedCodes.has(p?.codigo));
-    if (selected.length === 0) return;
-    const showInfo = !hideInfoOnExport;
-
-    const html = `<!DOCTYPE html>
+  const buildCatalogHtml = (selected: any[], showInfo: boolean, cols: number) => {
+    const maxWidth = cols === 1 ? '400px' : '500px';
+    return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Catálogo Dande Acessórios</title>
 <style>
@@ -212,21 +218,28 @@ export default function CatalogClient() {
   body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#333;padding:20px}
   h1{text-align:center;color:#E91E8C;margin-bottom:8px;font-size:22px}
   .subtitle{text-align:center;color:#888;font-size:12px;margin-bottom:24px}
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:500px;margin:0 auto}
-  .card{border-radius:12px;overflow:hidden;${showInfo ? 'border:1px solid #eee;' : ''}}
-  .card img{width:100%;aspect-ratio:1;object-fit:cover;background:#f5f5f5;${!showInfo ? 'border-radius:12px;' : ''}}
-  .card .info{padding:8px 10px}
-  .card .name{font-size:11px;font-weight:600;margin-bottom:2px}
-  .card .code{font-size:9px;color:#999;font-family:monospace}
-  .card .price{font-size:13px;font-weight:700;color:#E91E8C;margin-top:4px}
+  .grid{display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px;max-width:${maxWidth};margin:0 auto}
+  .card{border-radius:12px;overflow:hidden;break-inside:avoid;${showInfo ? 'border:1px solid #eee;' : ''}}
+  .card img{display:block}
+  .info{padding:8px 10px}
+  .name{font-size:${cols === 1 ? '13px' : '11px'};font-weight:600;margin-bottom:2px}
+  .code{font-size:${cols === 1 ? '10px' : '9px'};color:#999;font-family:monospace}
+  .price{font-size:${cols === 1 ? '15px' : '13px'};font-weight:700;color:#E91E8C;margin-top:4px}
   @media print{body{padding:10px}.grid{gap:8px}}
 </style></head><body>
 <h1>💎 Dande Acessórios</h1>
 <p class="subtitle">${selected.length} produto(s)</p>
 <div class="grid">
-${selected.map((p: any) => buildCardHtml(p, showInfo)).join('\n')}
+${selected.map((p: any) => buildCardHtml(p, showInfo, cols)).join('\n')}
 </div>
 </body></html>`;
+  };
+
+  const exportSelected = () => {
+    const selected = produtos.filter((p: any) => selectedCodes.has(p?.codigo));
+    if (selected.length === 0) return;
+    const showInfo = !hideInfoOnExport;
+    const html = buildCatalogHtml(selected, showInfo, exportColumns);
 
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
@@ -241,28 +254,7 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo)).join('\n')}
     const selected = produtos.filter((p: any) => selectedCodes.has(p?.codigo));
     if (selected.length === 0) return;
     const showInfo = !hideInfoOnExport;
-
-    const html = `<!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Catálogo Dande</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:10mm}
-  h1{text-align:center;color:#E91E8C;font-size:18px;margin-bottom:4mm}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
-  .card{border-radius:4mm;overflow:hidden;break-inside:avoid;${showInfo ? 'border:1px solid #ddd;' : ''}}
-  .card img{width:100%;aspect-ratio:1;object-fit:cover;${!showInfo ? 'border-radius:4mm;' : ''}}
-  .info{padding:2mm 3mm}
-  .name{font-size:9px;font-weight:600}
-  .code{font-size:8px;color:#999;font-family:monospace}
-  .price{font-size:11px;font-weight:700;color:#E91E8C;margin-top:1mm}
-</style></head><body>
-<h1>Dande Acessórios</h1>
-<div class="grid">
-${selected.map((p: any) => buildCardHtml(p, showInfo)).join('')}
-</div>
-<script>window.onload=()=>{window.print()}<\/script>
-</body></html>`;
+    const html = buildCatalogHtml(selected, showInfo, exportColumns).replace('</body>', '<script>window.onload=()=>{window.print()}<\/script></body>');
 
     const w = window.open('', '_blank');
     if (w) {
@@ -411,15 +403,41 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo)).join('')}
               </div>
             </div>
 
-            {/* Row 2: hide info toggle */}
+            {/* Row 2: export options */}
             {selectedCodes.size > 0 && (
-              <button
-                onClick={() => setHideInfoOnExport(!hideInfoOnExport)}
-                className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {hideInfoOnExport ? <EyeOff size={12} className="text-primary" /> : <Eye size={12} />}
-                {hideInfoOnExport ? 'Catálogo só imagens (info oculta)' : 'Ocultar info no catálogo'}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setHideInfoOnExport(!hideInfoOnExport)}
+                  className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {hideInfoOnExport ? <EyeOff size={12} className="text-primary" /> : <Eye size={12} />}
+                  {hideInfoOnExport ? 'Só imagens' : 'Ocultar info'}
+                </button>
+
+                <div className="flex items-center gap-1 ml-auto">
+                  <span className="text-[10px] text-muted-foreground">Colunas:</span>
+                  <button
+                    onClick={() => setExportColumns(1)}
+                    className={`w-6 h-6 rounded-lg text-[10px] font-bold transition-all active:scale-90 ${
+                      exportColumns === 1
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'bg-card border border-border text-muted-foreground hover:border-primary/50'
+                    }`}
+                  >
+                    1
+                  </button>
+                  <button
+                    onClick={() => setExportColumns(2)}
+                    className={`w-6 h-6 rounded-lg text-[10px] font-bold transition-all active:scale-90 ${
+                      exportColumns === 2
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'bg-card border border-border text-muted-foreground hover:border-primary/50'
+                    }`}
+                  >
+                    2
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
