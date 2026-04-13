@@ -194,11 +194,22 @@ export default function CatalogClient() {
     const nome = (p?.nome ?? '').trim().split(/\s+/).slice(0, 2).join(' ');
     const preco = `R$ ${(p?.preco ?? 0).toFixed(2).replace('.', ',')}`;
     const aspectRatio = cols === 1 ? '3/4' : '4/5';
+    const imgStyle = `width:100%;aspect-ratio:${aspectRatio};object-fit:cover;background:#f5f5f5;display:block;`;
 
-    const imgsHtml = imagens.length > 0
-      ? imagens.map((img: any) =>
-          `<img src="${img.url}" alt="${nome}" style="width:100%;aspect-ratio:${aspectRatio};object-fit:cover;background:#f5f5f5;display:block;${!showInfo && imagens.length === 1 ? 'border-radius:12px;' : ''}">`
-        ).join('\n')
+    // Filter only images (exclude videos that can't render as <img>)
+    const onlyImages = imagens.filter((img: any) => {
+      const isVideo = img?.tipo === 'video' || img?.url?.match?.(/\.(mp4|webm|mov|avi)$/i);
+      if (isVideo && img?.thumbnailUrl) return true; // use thumbnail
+      return !isVideo;
+    });
+
+    const imgsHtml = onlyImages.length > 0
+      ? onlyImages.map((img: any) => {
+          const isVideo = img?.tipo === 'video' || img?.url?.match?.(/\.(mp4|webm|mov|avi)$/i);
+          const src = isVideo ? img.thumbnailUrl : img.url;
+          const singleRound = !showInfo && onlyImages.length === 1 ? 'border-radius:12px;' : '';
+          return `<img src="${src}" alt="${nome}" style="${imgStyle}${singleRound}">`;
+        }).join('\n')
       : `<div style="aspect-ratio:${aspectRatio};background:#f0e0f0;display:flex;align-items:center;justify-content:center;font-size:32px">💎</div>`;
 
     const infoHtml = showInfo
@@ -241,24 +252,27 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo, cols)).join('\n')}
     const showInfo = !hideInfoOnExport;
     const html = buildCatalogHtml(selected, showInfo, exportColumns);
 
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
+    // Use data URI approach - works in iframes and all browsers
+    const dataUri = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = dataUri;
     a.download = `catalogo-dande-${Date.now()}.html`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   };
 
   const printSelected = () => {
     const selected = produtos.filter((p: any) => selectedCodes.has(p?.codigo));
     if (selected.length === 0) return;
     const showInfo = !hideInfoOnExport;
-    const html = buildCatalogHtml(selected, showInfo, exportColumns).replace('</body>', '<script>window.onload=()=>{window.print()}<\/script></body>');
+    const html = buildCatalogHtml(selected, showInfo, exportColumns);
 
+    // Open in new tab with the HTML content for printing
+    const printHtml = html.replace('</body>', '<script>window.onload=()=>{setTimeout(()=>window.print(),500)}<\/script></body>');
     const w = window.open('', '_blank');
     if (w) {
-      w.document.write(html);
+      w.document.write(printHtml);
       w.document.close();
     }
   };
