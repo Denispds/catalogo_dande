@@ -10,6 +10,8 @@ import { Search, ArrowUpDown, Loader2, Package, X, LayoutGrid, List, Square, Che
 
 const defaultFilters = { departamento: '', categoria: '', subcategoria: '', precoMin: '', precoMax: '', descontoMin: '' };
 const ordemOptions = [
+  { value: 'recente', label: 'Mais Recente' },
+  { value: 'antigo', label: 'Mais Antiga' },
   { value: 'nome_asc', label: 'A-Z' },
   { value: 'nome_desc', label: 'Z-A' },
   { value: 'preco_asc', label: 'Preço ↑' },
@@ -24,7 +26,7 @@ export default function CatalogClient() {
   const [busca, setBusca] = useState('');
   const [buscaInput, setBuscaInput] = useState('');
   const [filters, setFilters] = useState(defaultFilters);
-  const [ordem, setOrdem] = useState('nome_asc');
+  const [ordem, setOrdem] = useState('recente');
   const [page, setPage] = useState(1);
   const [limit] = useState(50);
   const [departamentos, setDepartamentos] = useState<any[]>([]);

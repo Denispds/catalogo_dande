@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
     if (ordem === 'nome_desc') orderBy = { nome: 'desc' };
     else if (ordem === 'preco_asc') orderBy = { preco: 'asc' };
     else if (ordem === 'preco_desc') orderBy = { preco: 'desc' };
-    else if (ordem === 'recente') orderBy = { updatedAt: 'desc' };
+    else if (ordem === 'recente') orderBy = { createdAt: 'desc' };
+    else if (ordem === 'antigo') orderBy = { createdAt: 'asc' };
 
     const [total, produtos] = await Promise.all([
       prisma.catProduto.count({ where }),
