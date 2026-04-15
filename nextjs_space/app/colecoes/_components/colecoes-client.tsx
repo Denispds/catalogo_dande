@@ -746,6 +746,31 @@ export default function ColecoesClient() {
                     </button>
                   ))}
                 </div>
+
+                {/* PREVIEW DO LAYOUT */}
+                <div className="bg-card/50 rounded-lg p-3 border border-border/20">
+                  <div className={`grid gap-2 ${catalogOptions.columns === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {searchResults.slice(0, catalogOptions.columns === 1 ? 2 : 4).map((p: any) => (
+                      <div key={p?.codigo} className="bg-muted/50 rounded-lg overflow-hidden aspect-video">
+                        {p?.imagens?.[0]?.url ? (
+                          <div className="relative w-full h-full">
+                            <Image
+                              src={p.imagens[0].url}
+                              alt={p?.nome}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted">
+                            <Package size={20} className="text-muted-foreground/40" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2">Prévia do layout</p>
+                </div>
               </div>
 
               {/* FORMATO */}
