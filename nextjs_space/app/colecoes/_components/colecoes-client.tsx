@@ -10,7 +10,7 @@ import ImageLightbox from '@/components/image-lightbox';
 import Image from 'next/image';
 import {
   Loader2, FolderOpen, MessageCircle, Download, Plus, Pencil, Trash2, X,
-  Search, ChevronDown, ArrowUpDown, Check, Package, Image as ImageIcon
+  Search, ChevronDown, ArrowUpDown, Check, Package, Image as ImageIcon, CheckSquare, Square
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -24,6 +24,21 @@ const ordemOptions = [
   { value: 'preco_asc', label: 'Preço ↑' },
   { value: 'preco_desc', label: 'Preço ↓' },
 ];
+
+// ===== UTILITY FUNCTIONS =====
+function formatDate(dateString: any) {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  } catch {
+    return '';
+  }
+}
 
 // ===== BUILD HTML EXPORT (same logic as catalog-client) =====
 function buildCardHtml(p: any, showInfo: boolean, cols: number) {
@@ -119,6 +134,15 @@ export default function ColecoesClient() {
   const [departamentos, setDepartamentos] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [addingProducts, setAddingProducts] = useState(false);
+  
+  // ===== CATALOG OPTIONS MODAL STATE =====
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [catalogOptions, setCatalogOptions] = useState({
+    columns: 2,
+    format: 'html',
+    showInfo: true,
+  });
+
   const searchTimeoutRef = useRef<any>(null);
   const searchLoadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -288,6 +312,24 @@ export default function ColecoesClient() {
     setAddingProducts(false);
   };
 
+  // ===== SELECT ALL / DESELECT ALL =====
+  const selectAllFiltered = () => {
+    const existingCodes = getExistingCodes();
+    const toSelect = new Set(selectedToAdd);
+    searchResults.forEach((p: any) => {
+      if (!existingCodes.has(p?.codigo)) {
+        toSelect.add(p?.codigo);
+      }
+    });
+    setSelectedToAdd(toSelect);
+    toast.success(`${toSelect.size - selectedToAdd.size} produtos selecionados!`);
+  };
+
+  const deselectAllFiltered = () => {
+    setSelectedToAdd(new Set());
+    toast.info('Seleção limpa');
+  };
+
   // ===== DOWNLOAD 1 CLICK =====
   const downloadCollection = (col: any) => {
     const prods = (col?.produtos ?? []).map((cp: any) => cp?.produto).filter(Boolean);
@@ -301,6 +343,46 @@ export default function ColecoesClient() {
     a.click();
     document.body.removeChild(a);
     toast.success('Download iniciado!');
+  };
+
+  // ===== GENERATE CATALOG (from modal options) =====
+  const handleGenerateCatalog = async (options: any) => {
+    const selected = searchResults.filter(p => selectedToAdd.has(p?.codigo));
+    if (selected.length === 0) {
+      toast.error('Nenhum produto selecionado');
+      return;
+    }
+
+    const colecao = colecoes.find(c => c?.id === addProductsColId);
+    const colecaoNome = colecao?.nome || 'Catálogo';
+    
+    // Sanitize filename
+    const safeFileName = colecaoNome
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    if (options.format === 'html') {
+      const html = buildCatalogHtml(colecaoNome, selected, options.showInfo, options.columns);
+      const dataUri = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+      const a = document.createElement('a');
+      a.href = dataUri;
+      a.download = `${safeFileName}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success(`Catálogo "${colecaoNome}" gerado!`);
+    } else if (options.format === 'pdf') {
+      toast.info('PDF em breve');
+    }
+
+    // Reset modal and add products
+    setAddProductsColId(null);
+    setSelectedToAdd(new Set());
+    setSearchBusca('');
+    setSearchFilters(defaultFilters);
+    setSearchOrdem('recente');
+    await handleAddProducts();
   };
 
   // ===== LIGHTBOX =====
@@ -417,6 +499,11 @@ export default function ColecoesClient() {
                         </span>
                       </div>
                       {col?.descricao && <p className="text-[11px] text-muted-foreground truncate mb-1">{col.descricao}</p>}
+                      {col?.updatedAt && (
+                        <p className="text-[10px] text-muted-foreground/60 mb-2">
+                          🕐 Atualizado: {formatDate(col?.updatedAt)}
+                        </p>
+                      )}
                       <MiniThumbs prods={prods} />
                     </div>
 
@@ -621,6 +708,106 @@ export default function ColecoesClient() {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* ===== CATALOG OPTIONS MODAL ===== */}
+      <AnimatePresence>
+        {showCatalogModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+            onClick={() => setShowCatalogModal(false)}
+          >
+            <motion.div
+              initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-background rounded-t-3xl sm:rounded-3xl p-6 space-y-5"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold">Gerar Catálogo</h3>
+                <button onClick={() => setShowCatalogModal(false)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* COLUNAS */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-2 block">Colunas</label>
+                <div className="flex gap-3">
+                  {[1, 2].map(col => (
+                    <button
+                      key={col}
+                      onClick={() => setCatalogOptions(prev => ({ ...prev, columns: col }))}
+                      className={`flex-1 py-2.5 rounded-lg border-2 transition-all font-semibold text-sm ${
+                        catalogOptions.columns === col
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-card border-border text-muted-foreground'
+                      }`}
+                    >
+                      {col} coluna{col > 1 ? 's' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* FORMATO */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-2 block">Formato</label>
+                <div className="flex gap-3">
+                  {[
+                    { value: 'html', label: '📄 HTML', desc: 'Visualizar no navegador' },
+                    { value: 'pdf', label: '📕 PDF', desc: 'Imprimir ou salvar' },
+                  ].map(fmt => (
+                    <button
+                      key={fmt.value}
+                      onClick={() => setCatalogOptions(prev => ({ ...prev, format: fmt.value }))}
+                      className={`flex-1 py-3 rounded-lg border-2 transition-all text-left ${
+                        catalogOptions.format === fmt.value
+                          ? 'bg-primary/10 border-primary'
+                          : 'bg-card border-border'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm">{fmt.label}</div>
+                      <div className="text-[10px] text-muted-foreground">{fmt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* MOSTRAR INFORMAÇÕES */}
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={catalogOptions.showInfo}
+                    onChange={(e) => setCatalogOptions(prev => ({ ...prev, showInfo: e.target.checked }))}
+                    className="w-4 h-4 rounded"
+                  />
+                  <span className="text-sm font-medium">Mostrar preço e código</span>
+                </label>
+              </div>
+
+              {/* BOTÕES */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCatalogModal(false)}
+                  className="flex-1 py-3 rounded-lg border border-border text-sm font-semibold active:scale-[0.97] transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCatalogModal(false);
+                    handleGenerateCatalog(catalogOptions);
+                  }}
+                  className="flex-1 py-3 rounded-lg bg-primary text-white text-sm font-semibold active:scale-[0.97] transition-all"
+                >
+                  Gerar Catálogo
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
 
       {/* ===== ADD PRODUCTS MODAL (FULL SCREEN) ===== */}
       <AnimatePresence>
@@ -638,12 +825,18 @@ export default function ColecoesClient() {
                 <h3 className="text-sm font-bold">Adicionar Produtos</h3>
               </div>
               <button
-                onClick={handleAddProducts}
-                disabled={selectedToAdd.size === 0 || addingProducts}
+                onClick={() => {
+                  if (selectedToAdd.size === 0) {
+                    toast.error('Selecione ao menos 1 produto');
+                    return;
+                  }
+                  setShowCatalogModal(true);
+                }}
+                disabled={selectedToAdd.size === 0}
                 className="flex items-center gap-1 px-4 py-2 rounded-2xl bg-primary text-white text-xs font-semibold disabled:opacity-40 active:scale-95 transition-all"
               >
-                {addingProducts ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                Adicionar ({selectedToAdd.size})
+                <Check size={14} />
+                Gerar Catálogo ({selectedToAdd.size})
               </button>
             </div>
 
@@ -738,6 +931,29 @@ export default function ColecoesClient() {
 
               <p className="text-[10px] text-muted-foreground">{searchTotal} produtos encontrados</p>
             </div>
+
+            {/* Selection bar */}
+            {searchResults.length > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-b border-primary/10">
+                <button
+                  onClick={selectAllFiltered}
+                  className="flex items-center gap-1 px-3 py-1 rounded-lg bg-primary text-white text-xs font-semibold active:scale-95 transition-all"
+                >
+                  <CheckSquare size={14} /> Selecionar Todos
+                </button>
+                {selectedToAdd.size > 0 && (
+                  <button
+                    onClick={deselectAllFiltered}
+                    className="flex items-center gap-1 px-3 py-1 rounded-lg bg-muted text-xs font-semibold active:scale-95 transition-all"
+                  >
+                    <Square size={14} /> Desselecionar
+                  </button>
+                )}
+                <div className="ml-auto text-xs font-semibold text-muted-foreground">
+                  {selectedToAdd.size} de {searchTotal}
+                </div>
+              </div>
+            )}
 
             {/* Products grid */}
             <div className="flex-1 overflow-y-auto px-4 py-3">

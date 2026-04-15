@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const { nome, descricao, cor } = body ?? {};
     if (!nome) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 });
     const colecao = await prisma.catColecao.create({
-      data: { nome, descricao: descricao ?? '', cor: cor ?? '#E91E8C', ativa: true },
+      data: { nome, descricao: descricao ?? '', cor: cor ?? '#E91E8C', ativa: true, updatedAt: new Date() },
     });
     return NextResponse.json(colecao, { status: 201 });
   } catch (error: any) {
