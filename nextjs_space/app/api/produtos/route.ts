@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
     const where: any = {};
     if (ativo !== 'all') where.ativo = true;
 
-    // Se comImagem=true e NÃO há busca, mostrar apenas produtos com imagem
-    if (comImagem === 'true' && !busca) {
+    // Se comImagem=true, mostrar APENAS produtos com imagem (independente de busca)
+    if (comImagem === 'true') {
       where.imagens = { some: {} };
     }
 
