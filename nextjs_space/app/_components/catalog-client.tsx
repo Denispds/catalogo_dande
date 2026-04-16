@@ -472,7 +472,7 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo, cols)).join('\n')}
         {/* Products */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <div className="w-10 h-10 rounded-full border-2 border-pink-200 border-t-pink-500 animate-spin" />
+            <div className="w-10 h-10 rounded-full border-2 border-pink-200 dark:border-gold/30 border-t-pink-500 dark:border-t-gold animate-spin" />
             <span className="text-sm text-muted-foreground">Carregando...</span>
           </div>
         ) : produtos?.length === 0 ? (

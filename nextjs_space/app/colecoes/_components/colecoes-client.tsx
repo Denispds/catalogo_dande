@@ -431,7 +431,7 @@ export default function ColecoesClient() {
           const img = cp?.produto?.imagens?.[0];
           const url = img?.url;
           return (
-            <div key={i} className="w-9 h-9 rounded-lg overflow-hidden bg-pink-50 flex-shrink-0 relative">
+            <div key={i} className="w-9 h-9 rounded-lg overflow-hidden bg-pink-50 dark:bg-neutral-900 flex-shrink-0 relative">
               {url ? (
                 <Image src={url} alt="" fill className="object-cover" unoptimized />
               ) : (
@@ -1082,7 +1082,7 @@ export default function ColecoesClient() {
                                 <Check size={12} strokeWidth={3} />
                               </div>
                             )}
-                            <div className="relative aspect-square bg-pink-50">
+                            <div className="relative aspect-square bg-pink-50 dark:bg-neutral-900">
                               {p?.imagens?.[0]?.url ? (
                                 <Image src={p.imagens[0].url} alt={p?.nome ?? ''} fill className="object-cover" unoptimized />
                               ) : (
@@ -1136,7 +1136,7 @@ export default function ColecoesClient() {
                             </div>
 
                             {/* Image */}
-                            <div className="relative w-12 h-12 rounded flex-shrink-0 bg-pink-50">
+                            <div className="relative w-12 h-12 rounded flex-shrink-0 bg-pink-50 dark:bg-neutral-900">
                               {p?.imagens?.[0]?.url ? (
                                 <Image src={p.imagens[0].url} alt={p?.nome ?? ''} fill className="object-cover rounded" unoptimized />
                               ) : (
