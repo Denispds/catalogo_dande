@@ -112,6 +112,7 @@ export default function ColecoesClient() {
   const [lightboxImages, setLightboxImages] = useState<{ url: string }[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxProduto, setLightboxProduto] = useState<any>(null);
 
   // CRUD modal
   const [crudModal, setCrudModal] = useState<'create' | 'edit' | null>(null);
@@ -415,6 +416,7 @@ export default function ColecoesClient() {
     if (imgs.length > 0) {
       setLightboxImages(imgs);
       setLightboxIndex(Math.min(imageIndex, imgs.length - 1));
+      setLightboxProduto(produto);
       setLightboxOpen(true);
     }
   };
@@ -1308,7 +1310,8 @@ export default function ColecoesClient() {
         images={lightboxImages}
         initialIndex={lightboxIndex}
         isOpen={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
+        onClose={() => { setLightboxOpen(false); setLightboxProduto(null); }}
+        produto={lightboxProduto}
       />
     </div>
   );

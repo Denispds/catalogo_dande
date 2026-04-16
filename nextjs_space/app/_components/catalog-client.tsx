@@ -49,12 +49,14 @@ export default function CatalogClient() {
   const [lightboxImages, setLightboxImages] = useState<{ url: string }[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxProduto, setLightboxProduto] = useState<any>(null);
 
   const handleImageTap = (produto: any, imageIndex: number) => {
     const imgs = produto?.imagens ?? [];
     if (imgs.length === 0) return;
     setLightboxImages(imgs);
     setLightboxIndex(imageIndex);
+    setLightboxProduto(produto);
     setLightboxOpen(true);
   };
 
@@ -525,7 +527,8 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo, cols)).join('\n')}
         images={lightboxImages}
         initialIndex={lightboxIndex}
         isOpen={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
+        onClose={() => { setLightboxOpen(false); setLightboxProduto(null); }}
+        produto={lightboxProduto}
       />
     </div>
   );
