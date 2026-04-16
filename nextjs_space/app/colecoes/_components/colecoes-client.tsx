@@ -10,10 +10,12 @@ import ImageLightbox from '@/components/image-lightbox';
 import Image from 'next/image';
 import {
   Loader2, FolderOpen, MessageCircle, Download, Plus, Pencil, Trash2, X,
-  Search, ChevronDown, ArrowUpDown, Check, Package, Image as ImageIcon, CheckSquare, Square
+  Search, ChevronDown, ArrowUpDown, Check, Package, Image as ImageIcon, CheckSquare, Square,
+  List, Grid3x3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { generateCatalogName } from '@/lib/catalog-naming';
 
 const defaultFilters = { departamento: '', categoria: '', subcategoria: '', precoMin: '', precoMax: '', descontoMin: '' };
 const ordemOptions = [
@@ -134,7 +136,17 @@ export default function ColecoesClient() {
   const [departamentos, setDepartamentos] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [addingProducts, setAddingProducts] = useState(false);
-  
+  const [searchViewMode, setSearchViewMode] = useState<'grid' | 'list'>('grid');
+
+  // ===== SAVE COLLECTION MODAL STATE =====
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveFormData, setSaveFormData] = useState({
+    colecaoId: '',
+    colecaoNome: '',
+    colecaoDescricao: '',
+    catalogName: '',
+  });
+
   // ===== CATALOG OPTIONS MODAL STATE =====
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [catalogOptions, setCatalogOptions] = useState({
@@ -346,24 +358,26 @@ export default function ColecoesClient() {
   };
 
   // ===== GENERATE CATALOG (from modal options) =====
-  const handleGenerateCatalog = async (options: any) => {
+  const handleGenerateCatalog = async (options: any, customName?: string) => {
     const selected = searchResults.filter(p => selectedToAdd.has(p?.codigo));
     if (selected.length === 0) {
       toast.error('Nenhum produto selecionado');
       return;
     }
 
-    const colecao = colecoes.find(c => c?.id === addProductsColId);
-    const colecaoNome = colecao?.nome || 'Catálogo';
+    // Use custom name from modal or fallback to collection name
+    const displayName = customName || saveFormData.catalogName || 'Catálogo';
     
     // Sanitize filename
-    const safeFileName = colecaoNome
+    const safeFileName = displayName
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
 
     if (options.format === 'html') {
-      const html = buildCatalogHtml(colecaoNome, selected, options.showInfo, options.columns);
+      const html = buildCatalogHtml(displayName, selected, options.showInfo, options.columns);
       const dataUri = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
       const a = document.createElement('a');
       a.href = dataUri;
@@ -371,7 +385,7 @@ export default function ColecoesClient() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      toast.success(`Catálogo "${colecaoNome}" gerado!`);
+      toast.success(`Catálogo "${displayName}" gerado!`);
     } else if (options.format === 'pdf') {
       toast.info('PDF em breve');
     }
@@ -382,6 +396,7 @@ export default function ColecoesClient() {
     setSearchBusca('');
     setSearchFilters(defaultFilters);
     setSearchOrdem('recente');
+    setSaveFormData({ colecaoId: '', colecaoNome: '', colecaoDescricao: '', catalogName: '' });
     await handleAddProducts();
   };
 
@@ -821,7 +836,7 @@ export default function ColecoesClient() {
                 <button
                   onClick={() => {
                     setShowCatalogModal(false);
-                    handleGenerateCatalog(catalogOptions);
+                    handleGenerateCatalog(catalogOptions, saveFormData.catalogName);
                   }}
                   className="flex-1 py-3 rounded-lg bg-primary text-white text-sm font-semibold active:scale-[0.97] transition-all"
                 >
@@ -855,13 +870,22 @@ export default function ColecoesClient() {
                     toast.error('Selecione ao menos 1 produto');
                     return;
                   }
-                  setShowCatalogModal(true);
+                  // Abre o modal de salvar coleção com catálogo
+                  const col = colecoes.find((c: any) => c?.id === addProductsColId);
+                  setSaveFormData(prev => ({
+                    ...prev,
+                    colecaoId: addProductsColId || '',
+                    colecaoNome: col?.nome || '',
+                    colecaoDescricao: col?.descricao || '',
+                    catalogName: generateCatalogName(col?.nome || ''),
+                  }));
+                  setShowSaveModal(true);
                 }}
                 disabled={selectedToAdd.size === 0}
                 className="flex items-center gap-1 px-4 py-2 rounded-2xl bg-primary text-white text-xs font-semibold disabled:opacity-40 active:scale-95 transition-all"
               >
                 <Check size={14} />
-                Gerar Catálogo ({selectedToAdd.size})
+                Salvar Produtos ({selectedToAdd.size})
               </button>
             </div>
 
@@ -980,7 +1004,33 @@ export default function ColecoesClient() {
               </div>
             )}
 
-            {/* Products grid */}
+            {/* Toggle Lista/Grid */}
+            <div className="flex items-center gap-1 px-4 py-2 border-b border-border/20 bg-card/50">
+              <button
+                onClick={() => setSearchViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-all ${
+                  searchViewMode === 'grid'
+                    ? 'bg-primary text-white'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                }`}
+                title="Visualizar em Grid"
+              >
+                <Grid3x3 size={16} />
+              </button>
+              <button
+                onClick={() => setSearchViewMode('list')}
+                className={`p-1.5 rounded-lg transition-all ${
+                  searchViewMode === 'list'
+                    ? 'bg-primary text-white'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                }`}
+                title="Visualizar em Lista"
+              >
+                <List size={16} />
+              </button>
+            </div>
+
+            {/* Products grid/list */}
             <div className="flex-1 overflow-y-auto px-4 py-3">
               {searchLoading && searchResults.length === 0 ? (
                 <div className="flex items-center justify-center py-20">
@@ -993,50 +1043,112 @@ export default function ColecoesClient() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 gap-2">
-                    {searchResults.map((p: any) => {
-                      const existingCodes = getExistingCodes();
-                      const alreadyInCol = existingCodes.has(p?.codigo);
-                      const isSelected = selectedToAdd.has(p?.codigo);
-                      return (
-                        <div
-                          key={p?.codigo}
-                          onClick={() => {
-                            if (alreadyInCol) return;
-                            setSelectedToAdd(prev => {
-                              const next = new Set(prev);
-                              if (next.has(p?.codigo)) next.delete(p?.codigo);
-                              else next.add(p?.codigo);
-                              return next;
-                            });
-                          }}
-                          className={`relative rounded-2xl overflow-hidden transition-all cursor-pointer active:scale-[0.97] ${
-                            alreadyInCol ? 'opacity-40 pointer-events-none' : isSelected ? 'ring-2 ring-primary shadow-md' : 'bg-card'
-                          }`}
-                        >
-                          {/* Selection indicator */}
-                          {(isSelected || alreadyInCol) && (
-                            <div className={`absolute top-1.5 left-1.5 z-10 w-5 h-5 rounded-full flex items-center justify-center ${
-                              alreadyInCol ? 'bg-gray-400 text-white' : 'bg-primary text-white'
-                            }`}>
-                              <Check size={12} strokeWidth={3} />
-                            </div>
-                          )}
-                          <div className="relative aspect-square bg-pink-50">
-                            {p?.imagens?.[0]?.url ? (
-                              <Image src={p.imagens[0].url} alt={p?.nome ?? ''} fill className="object-cover" unoptimized />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-lg">💎</div>
+                  {searchViewMode === 'grid' ? (
+                    // ===== GRID VIEW =====
+                    <div className="grid grid-cols-3 gap-2">
+                      {searchResults.map((p: any) => {
+                        const existingCodes = getExistingCodes();
+                        const alreadyInCol = existingCodes.has(p?.codigo);
+                        const isSelected = selectedToAdd.has(p?.codigo);
+                        return (
+                          <div
+                            key={p?.codigo}
+                            onClick={() => {
+                              if (alreadyInCol) return;
+                              setSelectedToAdd(prev => {
+                                const next = new Set(prev);
+                                if (next.has(p?.codigo)) next.delete(p?.codigo);
+                                else next.add(p?.codigo);
+                                return next;
+                              });
+                            }}
+                            className={`relative rounded-2xl overflow-hidden transition-all cursor-pointer active:scale-[0.97] ${
+                              alreadyInCol ? 'opacity-40 pointer-events-none' : isSelected ? 'ring-2 ring-primary shadow-md' : 'bg-card'
+                            }`}
+                          >
+                            {/* Selection indicator */}
+                            {(isSelected || alreadyInCol) && (
+                              <div className={`absolute top-1.5 left-1.5 z-10 w-5 h-5 rounded-full flex items-center justify-center ${
+                                alreadyInCol ? 'bg-gray-400 text-white' : 'bg-primary text-white'
+                              }`}>
+                                <Check size={12} strokeWidth={3} />
+                              </div>
                             )}
+                            <div className="relative aspect-square bg-pink-50">
+                              {p?.imagens?.[0]?.url ? (
+                                <Image src={p.imagens[0].url} alt={p?.nome ?? ''} fill className="object-cover" unoptimized />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-lg">💎</div>
+                              )}
+                            </div>
+                            <div className="px-2 py-1.5">
+                              <p className="text-[10px] font-medium truncate">{(p?.nome ?? '').split(/\s+/).slice(0, 2).join(' ')}</p>
+                              <p className="text-[10px] font-bold text-primary">R$ {(p?.preco ?? 0).toFixed(2).replace('.', ',')}</p>
+                            </div>
                           </div>
-                          <div className="px-2 py-1.5">
-                            <p className="text-[10px] font-medium truncate">{(p?.nome ?? '').split(/\s+/).slice(0, 2).join(' ')}</p>
-                            <p className="text-[10px] font-bold text-primary">R$ {(p?.preco ?? 0).toFixed(2).replace('.', ',')}</p>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    // ===== LIST VIEW =====
+                    <div className="space-y-1">
+                      {searchResults.map((p: any) => {
+                        const existingCodes = getExistingCodes();
+                        const alreadyInCol = existingCodes.has(p?.codigo);
+                        const isSelected = selectedToAdd.has(p?.codigo);
+                        return (
+                          <div
+                            key={p?.codigo}
+                            onClick={() => {
+                              if (alreadyInCol) return;
+                              setSelectedToAdd(prev => {
+                                const next = new Set(prev);
+                                if (next.has(p?.codigo)) next.delete(p?.codigo);
+                                else next.add(p?.codigo);
+                                return next;
+                              });
+                            }}
+                            className={`flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer ${
+                              alreadyInCol
+                                ? 'opacity-40 pointer-events-none'
+                                : isSelected
+                                  ? 'bg-primary/10 ring-2 ring-primary'
+                                  : 'bg-muted/50 hover:bg-muted/70'
+                            }`}
+                          >
+                            {/* Checkbox */}
+                            <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
+                              isSelected || alreadyInCol
+                                ? alreadyInCol ? 'bg-gray-400' : 'bg-primary'
+                                : 'bg-muted border border-muted-foreground/30'
+                            }`}>
+                              {(isSelected || alreadyInCol) && (
+                                <Check size={12} className="text-white" strokeWidth={3} />
+                              )}
+                            </div>
+
+                            {/* Image */}
+                            <div className="relative w-12 h-12 rounded flex-shrink-0 bg-pink-50">
+                              {p?.imagens?.[0]?.url ? (
+                                <Image src={p.imagens[0].url} alt={p?.nome ?? ''} fill className="object-cover rounded" unoptimized />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-sm">💎</div>
+                              )}
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{p?.nome}</p>
+                              <p className="text-[11px] text-muted-foreground">{p?.codigo}</p>
+                            </div>
+
+                            {/* Price */}
+                            <p className="text-xs font-bold text-primary flex-shrink-0">R$ {(p?.preco ?? 0).toFixed(2).replace('.', ',')}</p>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                   {/* Infinite scroll trigger */}
                   <div ref={searchLoadMoreRef} className="py-4 flex justify-center">
                     {searchLoading && <Loader2 size={20} className="animate-spin text-primary" />}
@@ -1044,6 +1156,133 @@ export default function ColecoesClient() {
                 </>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== SAVE COLLECTION MODAL ===== */}
+      <AnimatePresence>
+        {showSaveModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/50 flex items-end"
+          >
+            <motion.div
+              initial={{ y: 500 }} animate={{ y: 0 }} exit={{ y: 500 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full bg-card rounded-t-3xl p-4 space-y-4 max-h-[90vh] overflow-y-auto"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-border/20">
+                <h3 className="text-lg font-bold">Salvar Produtos</h3>
+                <button onClick={() => setShowSaveModal(false)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Catalog Name */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">Nome do Catálogo</label>
+                <input
+                  type="text"
+                  value={saveFormData.catalogName}
+                  onChange={(e) => setSaveFormData(prev => ({ ...prev, catalogName: e.target.value }))}
+                  placeholder="Ex: Prata 925 - Anéis"
+                  className="w-full px-3 py-2.5 rounded-xl bg-muted/50 text-sm border border-border/20 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                />
+                <p className="text-[10px] text-muted-foreground">Este nome aparecerá no arquivo gerado</p>
+              </div>
+
+              {/* Catalog Format */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">Formato do Catálogo</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCatalogOptions(prev => ({ ...prev, format: 'html' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      catalogOptions.format === 'html'
+                        ? 'bg-primary text-white'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`}
+                  >
+                    HTML
+                  </button>
+                  <button
+                    onClick={() => setCatalogOptions(prev => ({ ...prev, format: 'pdf' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      catalogOptions.format === 'pdf'
+                        ? 'bg-primary text-white'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`}
+                  >
+                    PDF
+                  </button>
+                </div>
+              </div>
+
+              {/* Layout */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">Layout</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCatalogOptions(prev => ({ ...prev, columns: 1 }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      catalogOptions.columns === 1
+                        ? 'bg-primary text-white'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`}
+                  >
+                    1 Coluna
+                  </button>
+                  <button
+                    onClick={() => setCatalogOptions(prev => ({ ...prev, columns: 2 }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      catalogOptions.columns === 2
+                        ? 'bg-primary text-white'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`}
+                  >
+                    2 Colunas
+                  </button>
+                </div>
+              </div>
+
+              {/* Show Info */}
+              <label className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-all">
+                <input
+                  type="checkbox"
+                  checked={catalogOptions.showInfo}
+                  onChange={(e) => setCatalogOptions(prev => ({ ...prev, showInfo: e.target.checked }))}
+                  className="w-4 h-4 rounded cursor-pointer"
+                />
+                <span className="text-xs font-medium">Mostrar nome, código e preço</span>
+              </label>
+
+              {/* Product Count */}
+              <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-xs font-semibold text-primary">{selectedToAdd.size} produto(s) selecionado(s)</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowSaveModal(false)}
+                  className="flex-1 px-4 py-3 rounded-xl bg-muted text-muted-foreground font-medium text-sm transition-all active:scale-95"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    await handleAddProducts();
+                    setShowSaveModal(false);
+                    setShowCatalogModal(true);
+                  }}
+                  className="flex-1 px-4 py-3 rounded-xl bg-primary text-white font-medium text-sm transition-all active:scale-95"
+                >
+                  Salvar e Gerar
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
