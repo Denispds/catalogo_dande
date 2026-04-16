@@ -39,27 +39,59 @@ export async function GET(request: NextRequest) {
     if (precoMin) where.preco = { ...(where.preco ?? {}), gte: parseFloat(precoMin) };
     if (precoMax) where.preco = { ...(where.preco ?? {}), lte: parseFloat(precoMax) };
 
-    let orderBy: any = { nome: 'asc' };
-    if (ordem === 'nome_desc') orderBy = { nome: 'desc' };
-    else if (ordem === 'preco_asc') orderBy = { preco: 'asc' };
-    else if (ordem === 'preco_desc') orderBy = { preco: 'desc' };
-    else if (ordem === 'recente') orderBy = { createdAt: 'desc' };
-    else if (ordem === 'antigo') orderBy = { createdAt: 'asc' };
+    // Determine if we need to sort by image date
+    const sortByImageDate = ordem === 'recente' || ordem === 'antigo';
 
-    const [total, produtos] = await Promise.all([
-      prisma.catProduto.count({ where }),
-      prisma.catProduto.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * limit,
-        take: limit,
-        include: {
-          departamento: true,
-          categoria: true,
-          imagens: { orderBy: [{ principal: 'desc' }, { ordem: 'asc' }] },
-        },
-      }),
-    ]);
+    let orderBy: any = { nome: 'asc' };
+    if (!sortByImageDate) {
+      if (ordem === 'nome_desc') orderBy = { nome: 'desc' };
+      else if (ordem === 'preco_asc') orderBy = { preco: 'asc' };
+      else if (ordem === 'preco_desc') orderBy = { preco: 'desc' };
+    }
+
+    const total = await prisma.catProduto.count({ where });
+    
+    // Fetch all matching products with their images for proper sorting
+    const allProdutos = await prisma.catProduto.findMany({
+      where,
+      include: {
+        departamento: true,
+        categoria: true,
+        imagens: { orderBy: [{ principal: 'desc' }, { ordem: 'asc' }] },
+      },
+    });
+
+    // Sort by image date if needed
+    let sorted = allProdutos;
+    if (sortByImageDate) {
+      sorted = allProdutos.sort((a: any, b: any) => {
+        // Get the most recent image date for each product
+        const aImageDate = a.imagens && a.imagens.length > 0 
+          ? new Date(a.imagens[0].createdAt).getTime()
+          : new Date(a.createdAt).getTime();
+        const bImageDate = b.imagens && b.imagens.length > 0
+          ? new Date(b.imagens[0].createdAt).getTime()
+          : new Date(b.createdAt).getTime();
+        
+        return ordem === 'recente' 
+          ? bImageDate - aImageDate  // Most recent first
+          : aImageDate - bImageDate;  // Oldest first
+      });
+    } else {
+      // Apply other sorting options
+      if (ordem === 'nome_asc') {
+        sorted = sorted.sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      } else if (ordem === 'nome_desc') {
+        sorted = sorted.sort((a: any, b: any) => b.nome.localeCompare(a.nome, 'pt-BR'));
+      } else if (ordem === 'preco_asc') {
+        sorted = sorted.sort((a: any, b: any) => a.preco - b.preco);
+      } else if (ordem === 'preco_desc') {
+        sorted = sorted.sort((a: any, b: any) => b.preco - a.preco);
+      }
+    }
+
+    // Apply pagination
+    const produtos = sorted.slice((page - 1) * limit, page * limit);
 
     // Apply discount filter in-memory (complex calc)
     let filtered = produtos;
