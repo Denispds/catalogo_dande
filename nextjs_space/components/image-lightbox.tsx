@@ -260,18 +260,13 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
                 {/* Código */}
                 {produto.codigo && (
                   <p className="text-white/60 text-sm">
-                    C\u00f3d: {produto.codigo}
+                    {produto.codigo}
                   </p>
                 )}
 
                 {/* Preço + WhatsApp */}
                 <div className="flex items-center justify-between">
                   <div>
-                    {produto.precoOriginal && produto.precoOriginal > (produto.preco || 0) && (
-                      <p className="text-white/40 text-xs line-through">
-                        {fmt(produto.precoOriginal)}
-                      </p>
-                    )}
                     {produto.preco !== undefined && produto.preco !== null && (
                       <p className="text-[#E91E8C] font-extrabold text-2xl">
                         {fmt(produto.preco)}
