@@ -300,7 +300,7 @@ export default function ColecoesClient() {
     } catch { toast.error('Erro ao remover'); }
   };
 
-  const handleAddProducts = async () => {
+  const handleAddProducts = async (keepState = false) => {
     if (!addProductsColId || selectedToAdd.size === 0) return;
     setAddingProducts(true);
     let added = 0;
@@ -315,13 +315,25 @@ export default function ColecoesClient() {
       } catch {}
     }
     toast.success(`${added} produto(s) adicionado(s)!`);
+    // Only clear state if not keeping it for catalog generation
+    if (!keepState) {
+      setAddProductsColId(null);
+      setSelectedToAdd(new Set());
+      setSearchBusca('');
+      setSearchFilters(defaultFilters);
+      setSearchOrdem('recente');
+    }
+    await fetchColecoes();
+    setAddingProducts(false);
+  };
+
+  const resetAllState = () => {
     setAddProductsColId(null);
     setSelectedToAdd(new Set());
     setSearchBusca('');
     setSearchFilters(defaultFilters);
     setSearchOrdem('recente');
-    await fetchColecoes();
-    setAddingProducts(false);
+    setSaveFormData({ colecaoId: '', colecaoNome: '', colecaoDescricao: '', catalogName: '' });
   };
 
   // ===== SELECT ALL / DESELECT ALL =====
@@ -390,14 +402,8 @@ export default function ColecoesClient() {
       toast.info('PDF em breve');
     }
 
-    // Reset modal and add products
-    setAddProductsColId(null);
-    setSelectedToAdd(new Set());
-    setSearchBusca('');
-    setSearchFilters(defaultFilters);
-    setSearchOrdem('recente');
-    setSaveFormData({ colecaoId: '', colecaoNome: '', colecaoDescricao: '', catalogName: '' });
-    await handleAddProducts();
+    // Now clean up everything
+    resetAllState();
   };
 
   // ===== LIGHTBOX =====
@@ -1273,13 +1279,21 @@ export default function ColecoesClient() {
                 </button>
                 <button
                   onClick={async () => {
-                    await handleAddProducts();
+                    // Save products first but KEEP state for catalog generation
+                    await handleAddProducts(true);
                     setShowSaveModal(false);
                     setShowCatalogModal(true);
                   }}
-                  className="flex-1 px-4 py-3 rounded-xl bg-primary text-white font-medium text-sm transition-all active:scale-95"
+                  disabled={addingProducts}
+                  className="flex-1 px-4 py-3 rounded-xl bg-primary text-white font-medium text-sm transition-all active:scale-95 disabled:opacity-50"
                 >
-                  Salvar e Gerar
+                  {addingProducts ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 size={14} className="animate-spin" /> Salvando...
+                    </span>
+                  ) : (
+                    'Salvar e Gerar'
+                  )}
                 </button>
               </div>
             </motion.div>
