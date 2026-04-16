@@ -25,8 +25,11 @@ export default function LoginClient() {
         const result = await signIn('credentials', { email, password, redirect: false });
         if (result?.error) {
           toast.error('Credenciais inválidas');
+          setLoading(false);
         } else {
-          router.replace('/admin');
+          toast.success('Login realizado!');
+          window.location.href = '/admin';
+          return;
         }
       } else {
         const res = await fetch('/api/signup', {
@@ -39,8 +42,13 @@ export default function LoginClient() {
           toast.error(data?.error ?? 'Erro ao cadastrar');
         } else {
           const result = await signIn('credentials', { email, password, redirect: false });
-          if (result?.error) toast.error('Erro ao entrar');
-          else router.replace('/admin');
+          if (result?.error) {
+            toast.error('Erro ao entrar');
+          } else {
+            toast.success('Conta criada com sucesso!');
+            window.location.href = '/admin';
+            return;
+          }
         }
       }
     } catch (err: any) {

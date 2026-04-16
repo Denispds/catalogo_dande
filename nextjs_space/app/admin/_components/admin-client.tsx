@@ -354,47 +354,79 @@ export default function AdminClient() {
   };
 
   if (status === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 size={32} className="animate-spin text-primary" /></div>;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+          <Loader2 size={24} className="animate-spin text-primary" />
+        </div>
+        <p className="text-sm text-muted-foreground">Carregando painel...</p>
+      </div>
+    );
   }
 
   if (status === 'unauthenticated') return null;
 
+  const statsCards = [
+    { label: 'Produtos', value: stats?.totalProdutos ?? 0, icon: Package, color: 'from-pink-500 to-rose-500' },
+    { label: 'Departamentos', value: stats?.totalDepts ?? 0, icon: FolderOpen, color: 'from-violet-500 to-purple-500' },
+    { label: 'Categorias', value: stats?.totalCats ?? 0, icon: BookOpen, color: 'from-blue-500 to-cyan-500' },
+    { label: 'Coleções', value: stats?.totalColecoes ?? 0, icon: FolderOpen, color: 'from-amber-500 to-orange-500' },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       <Header />
-      <main className="max-w-[1200px] mx-auto px-4 py-6">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <h1 className="text-2xl font-bold flex items-center gap-2"><LayoutDashboard size={24} className="text-primary" /> Painel Admin</h1>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-            {[
-              { label: 'Produtos', value: stats?.totalProdutos ?? 0, icon: Package },
-              { label: 'Departamentos', value: stats?.totalDepts ?? 0, icon: FolderOpen },
-              { label: 'Categorias', value: stats?.totalCats ?? 0, icon: FolderOpen },
-              { label: 'Coleções', value: stats?.totalColecoes ?? 0, icon: FolderOpen },
-            ]?.map?.((s: any, i: number) => (
-              <div key={i} className="p-3 rounded-xl bg-card flex items-center gap-3" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                <s.icon size={20} className="text-primary" />
-                <div>
-                  <p className="text-xl font-bold">{s?.value}</p>
-                  <p className="text-xs text-muted-foreground">{s?.label}</p>
-                </div>
-              </div>
-            ))}
+      <main className="max-w-lg mx-auto px-4 py-5">
+        {/* Welcome Header */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <p className="text-xs text-muted-foreground">Bem-vindo(a) de volta</p>
+              <h1 className="text-xl font-bold flex items-center gap-2">
+                <span className="text-primary">✦</span> Painel Admin
+              </h1>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-white text-sm font-bold">
+              {(session?.user?.name ?? session?.user?.email ?? 'A').charAt(0).toUpperCase()}
+            </div>
           </div>
         </motion.div>
 
+        {/* Stats Cards */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 gap-3 mb-6">
+          {statsCards.map((s, i) => (
+            <div key={i} className="relative overflow-hidden rounded-2xl bg-card p-4" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <div className={`absolute top-0 right-0 w-16 h-16 rounded-bl-[2rem] bg-gradient-to-br ${s.color} opacity-10`} />
+              <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center mb-2`}>
+                <s.icon size={16} className="text-white" />
+              </div>
+              <p className="text-2xl font-bold tracking-tight">{s.value}</p>
+              <p className="text-[11px] text-muted-foreground">{s.label}</p>
+            </div>
+          ))}
+        </motion.div>
+
         {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => setActiveTab('produtos')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'produtos' ? 'bg-primary text-white' : 'bg-card hover:bg-muted'}`}>
-            <Package size={14} className="inline mr-1" /> Produtos
-          </button>
-          <button onClick={() => setActiveTab('colecoes')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'colecoes' ? 'bg-primary text-white' : 'bg-card hover:bg-muted'}`}>
-            <FolderOpen size={14} className="inline mr-1" /> Coleções
-          </button>
-          <button onClick={() => setActiveTab('drive')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'drive' ? 'bg-primary text-white' : 'bg-card hover:bg-muted'}`}>
-            <Upload size={14} className="inline mr-1" /> Drive Sync
-          </button>
-        </div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="flex gap-2 mb-5 overflow-x-auto no-scrollbar">
+          {[
+            { key: 'produtos', label: 'Produtos', icon: Package },
+            { key: 'colecoes', label: 'Coleções', icon: FolderOpen },
+            { key: 'drive', label: 'Drive Sync', icon: Upload },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as any)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                activeTab === tab.key
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                  : 'bg-card text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <tab.icon size={15} />
+              {tab.label}
+            </button>
+          ))}
+        </motion.div>
 
         {activeTab === 'produtos' && (
           <div>
