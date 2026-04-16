@@ -153,20 +153,19 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
                 {isVideo ? (
                   <video
                     src={current?.url ?? ''}
-                    className="max-w-full max-h-full object-contain"
+                    className="max-w-full max-h-full object-contain rounded-2xl"
                     controls
                     autoPlay
                     playsInline
                     onEnded={() => { if (images.length > 1) goNext(); }}
                   />
                 ) : (
-                  <Image
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
                     src={current?.url ?? ''}
                     alt={produto?.nome || 'Produto Dande'}
-                    fill
-                    className="object-contain"
-                    unoptimized
-                    priority
+                    className="max-w-full max-h-full object-contain rounded-2xl"
+                    draggable={false}
                   />
                 )}
               </motion.div>
