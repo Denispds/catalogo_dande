@@ -1,0 +1,43 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+      
+      - name: Install dependencies
+        working-directory: ./nextjs_space
+        run: yarn install --frozen-lockfile
+      
+      - name: Run TypeScript check
+        working-directory: ./nextjs_space
+        run: yarn tsc --noEmit
+      
+      - name: Build Next.js application
+        working-directory: ./nextjs_space
+        run: yarn build
+      
+      - name: Deployment triggered
+        run: |
+          echo "✅ Build successful!"
+          echo "📦 Application is ready for deployment."
+          echo ""
+          echo "Deploy manually using the Abacus.AI dashboard:"
+          echo "1. Go to https://apps.abacusai.app/chatllm/?appId=appllm_engineer"
+          echo "2. Click 'Deploy' to push this build to production"
+          echo ""
+          echo "Deployment URLs:"
+          echo "- https://catalogo-dande-11z5g8.abacusai.app"
+          echo "- https://dandecatalogo.abacusai.app"
+          echo "- https://catalogo-dande.abacusai.app"

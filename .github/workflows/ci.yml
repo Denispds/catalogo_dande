@@ -1,0 +1,51 @@
+name: CI - Build and Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x]
+    
+    steps:
+      # Checkout do código
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      # Install dependencies
+      - name: Install dependencies
+        working-directory: ./nextjs_space
+        run: yarn install --frozen-lockfile
+      
+      # Check TypeScript
+      - name: Run TypeScript check
+        working-directory: ./nextjs_space
+        run: yarn tsc --noEmit
+      
+      # Build the Next.js app
+      - name: Build Next.js application
+        working-directory: ./nextjs_space
+        run: yarn build
+      
+      # Success notification
+      - name: Build successful ✅
+        if: success()
+        run: echo "Build completed successfully!"
+      
+      # Failure notification
+      - name: Build failed ❌
+        if: failure()
+        run: echo "Build failed! Check the logs above for details."

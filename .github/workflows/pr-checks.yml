@@ -1,0 +1,56 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+      
+      - name: Install dependencies
+        working-directory: ./nextjs_space
+        run: yarn install --frozen-lockfile
+      
+      - name: Type check
+        working-directory: ./nextjs_space
+        run: yarn tsc --noEmit
+      
+      - name: Build
+        working-directory: ./nextjs_space
+        run: yarn build
+      
+      - name: Comment PR on success
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Build passed! Type checking and compilation successful.'
+            })
+      
+      - name: Comment PR on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ Build failed! Please check the errors in the GitHub Actions logs.'
+            })
