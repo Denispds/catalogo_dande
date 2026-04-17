@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
       atualizados: 0,
       pulados: 0,
       erros: [] as { linha: number; motivo: string }[],
+      codigosAfetados: [] as string[], // Para histórico (rollback)
     };
 
     // Buscar códigos existentes
@@ -179,12 +180,14 @@ export async function POST(request: NextRequest) {
             data,
           });
           results.atualizados++;
+          results.codigosAfetados.push(codigo);
         } else {
           await prisma.catProduto.create({
             data: { codigo, ...data },
           });
           existingSet.add(codigo);
           results.criados++;
+          results.codigosAfetados.push(codigo);
         }
       } catch (err: any) {
         console.error(`Erro na linha ${linhaNum}:`, err?.message);
@@ -192,9 +195,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // --- Registrar no histórico ---
+    const importLog = await prisma.importLog.create({
+      data: {
+        usuarioId: (session.user as any)?.id || 'unknown',
+        totalLinhas: rows.length,
+        criados: results.criados,
+        atualizados: results.atualizados,
+        pulados: results.pulados,
+        erros: results.erros.length > 0 ? JSON.stringify(results.erros) : null,
+        codigosAfetados: results.codigosAfetados.length > 0 ? JSON.stringify(results.codigosAfetados) : null,
+        status: results.erros.length > 0 ? 'parcial' : 'sucesso',
+        arquivo: `import-${new Date().toISOString().split('T')[0]}`,
+        modo: mode,
+      },
+    });
+
     return NextResponse.json({
       success: true,
       total: rows.length,
+      importLogId: importLog.id,
       ...results,
     });
   } catch (err: any) {

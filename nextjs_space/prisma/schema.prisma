@@ -186,3 +186,20 @@ model CatProcedimento {
 
   @@map("cat_procedimentos")
 }
+
+model ImportLog {
+  id           String   @id @default(uuid())
+  usuarioId    String   @map("usuario_id")
+  totalLinhas  Int      @map("total_linhas")
+  criados      Int      @default(0)
+  atualizados  Int      @default(0)
+  pulados      Int      @default(0)
+  erros        String?  // JSON array de erros
+  codigosAfetados String?  @map("codigos_afetados")  // JSON array de códigos (para rollback)
+  status       String   @default("sucesso") // 'sucesso' ou 'erro'
+  arquivo      String?  // Nome do arquivo importado
+  modo         String   @default("update") // 'update' ou 'skip'
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("import_logs")
+}
