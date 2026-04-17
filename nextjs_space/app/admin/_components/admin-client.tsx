@@ -9,15 +9,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, Edit3, Trash2, Save, X, Loader2, Package, LayoutDashboard,
   FolderOpen, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, BookOpen, ChevronDown,
-  ToggleLeft, ToggleRight, Eye, EyeOff
+  ToggleLeft, ToggleRight, Eye, EyeOff, FileSpreadsheet
 } from 'lucide-react';
+import ImportProdutos from './import-produtos';
 
 const BADGES_OPTIONS = ['garantia', 'novo', 'pronta entrega'];
 
 export default function AdminClient() {
   const { data: session, status } = useSession() || {};
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'produtos' | 'colecoes' | 'drive'>('produtos');
+  const [activeTab, setActiveTab] = useState<'produtos' | 'colecoes' | 'drive' | 'import'>('produtos');
   const [produtos, setProdutos] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -411,6 +412,7 @@ export default function AdminClient() {
           {[
             { key: 'produtos', label: 'Produtos', icon: Package },
             { key: 'colecoes', label: 'Coleções', icon: FolderOpen },
+            { key: 'import', label: 'Importar', icon: FileSpreadsheet },
             { key: 'drive', label: 'Drive Sync', icon: Upload },
           ].map((tab) => (
             <button
@@ -722,6 +724,12 @@ export default function AdminClient() {
               ))}
             </div>
           </div>
+        )}
+
+        {activeTab === 'import' && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <ImportProdutos onImportDone={() => { fetchProdutos(); }} />
+          </motion.div>
         )}
 
         {activeTab === 'drive' && (
