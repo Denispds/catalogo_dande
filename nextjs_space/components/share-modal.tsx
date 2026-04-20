@@ -19,7 +19,7 @@ export default function ShareModal({ produto, isOpen, onClose }: ShareModalProps
   const productLink = useMemo(() => {
     if (typeof window === 'undefined') return '';
     const baseUrl = window.location.origin;
-    return `${baseUrl}/catalogo?produto=${produto?.codigo}`;
+    return `${baseUrl}/?produto=${produto?.codigo}`;
   }, [produto?.codigo]);
 
   const buildMessage = () => {
@@ -45,25 +45,36 @@ export default function ShareModal({ produto, isOpen, onClose }: ShareModalProps
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
-  const handleCopy = async () => {
+  const copyToClipboard = async (text: string) => {
     try {
-      await navigator?.clipboard?.writeText?.(buildMessage());
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e: any) {
-      console.error('Copy error:', e);
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try { document.execCommand('copy'); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (_) {}
+      document.body.removeChild(textarea);
     }
   };
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator?.clipboard?.writeText?.(productLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e: any) {
-      console.error('Copy error:', e);
-    }
-  };
+  const handleCopy = () => copyToClipboard(buildMessage());
+  const handleCopyLink = () => copyToClipboard(productLink);
 
   return (
     <AnimatePresence>

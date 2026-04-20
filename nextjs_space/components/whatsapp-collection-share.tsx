@@ -18,7 +18,7 @@ export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, show
   const collectionLink = useMemo(() => {
     if (typeof window === 'undefined') return '';
     const baseUrl = window.location.origin;
-    return `${baseUrl}/catalogo?colecao=${colecao?.id}`;
+    return `${baseUrl}/?colecao=${colecao?.id}`;
   }, [colecao?.id]);
 
   const buildMessage = () => {
@@ -44,21 +44,37 @@ export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, show
     window.open(`https://wa.me/?text=${encodeURIComponent(buildMessage())}`, '_blank');
   };
 
-  const handleCopy = async () => {
+  const copyToClipboard = async (text: string) => {
     try {
-      await navigator?.clipboard?.writeText?.(buildMessage());
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (e: any) { console.error(e); }
+    } catch (e: any) {
+      // Final fallback
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try { document.execCommand('copy'); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch (_) {}
+      document.body.removeChild(textarea);
+    }
   };
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator?.clipboard?.writeText?.(collectionLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e: any) { console.error(e); }
-  };
+  const handleCopy = () => copyToClipboard(buildMessage());
+  const handleCopyLink = () => copyToClipboard(collectionLink);
 
   return (
     <AnimatePresence>

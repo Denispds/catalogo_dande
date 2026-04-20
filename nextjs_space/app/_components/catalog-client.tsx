@@ -39,6 +39,8 @@ export default function CatalogClient() {
   const [hasMore, setHasMore] = useState(true);
   const searchTimeoutRef = useRef<any>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [deepLinkMode, setDeepLinkMode] = useState<'none' | 'produto' | 'colecao'>('none');
+  const [deepLinkColecaoNome, setDeepLinkColecaoNome] = useState('');
 
   // Layout & selection state
   const [layout, setLayout] = useState<'grid' | 'single' | 'list'>('grid');
@@ -68,14 +70,13 @@ export default function CatalogClient() {
     const colecaoId = searchParams?.get?.('colecao');
 
     if (produtoCodigo) {
+      setDeepLinkMode('produto');
       // Load specific product
       fetch(`/api/produtos/${produtoCodigo}`)
         .then(r => r.json())
         .then(data => {
           if (data?.id || data?.codigo) {
-            // Set the product for sharing modal, but don't auto-open
             setShareProduct(data);
-            // Auto-open lightbox if product has images
             if (data?.imagens?.length > 0) {
               setLightboxImages(data.imagens);
               setLightboxIndex(0);
@@ -86,19 +87,23 @@ export default function CatalogClient() {
         })
         .catch(e => console.error('Failed to load product:', e));
     } else if (colecaoId) {
+      setDeepLinkMode('colecao');
+      setLoading(true);
       // Load specific collection
       fetch(`/api/colecoes/${colecaoId}`)
         .then(r => r.json())
         .then(data => {
           if (data?.id) {
-            // Show products from this collection
+            setDeepLinkColecaoNome(data?.nome ?? 'Coleção');
             const colecaoProdutos = data?.produtos ?? [];
-            setProdutos(colecaoProdutos.map((cp: any) => cp?.produto ?? cp));
-            setTotal(colecaoProdutos.length);
+            const mapped = colecaoProdutos.map((cp: any) => cp?.produto ?? cp);
+            setProdutos(mapped);
+            setTotal(mapped.length);
             setHasMore(false);
           }
+          setLoading(false);
         })
-        .catch(e => console.error('Failed to load collection:', e));
+        .catch(e => { console.error('Failed to load collection:', e); setLoading(false); });
     }
   }, [searchParams]);
 
@@ -145,10 +150,10 @@ export default function CatalogClient() {
     else setLoading(false);
   }, [busca, filters, ordem, limit]);
 
-  // Fetch inicial
+  // Fetch inicial (skip if deep link is active for collection)
   useEffect(() => { 
-    if (page === 1) fetchProdutos(1, false); 
-  }, [fetchProdutos]);
+    if (page === 1 && deepLinkMode !== 'colecao') fetchProdutos(1, false); 
+  }, [fetchProdutos, deepLinkMode]);
 
   // Reset quando filtros/busca/ordem mudam
   useEffect(() => {
@@ -328,6 +333,23 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo, cols)).join('\n')}
       <Header />
 
       <main className="max-w-lg mx-auto px-4 pt-4">
+        {/* Deep link banner */}
+        {deepLinkMode === 'colecao' && deepLinkColecaoNome && (
+          <div className="mb-3 p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <Package size={16} className="text-primary shrink-0" />
+              <span className="text-sm font-medium truncate">Coleção: {deepLinkColecaoNome}</span>
+              <span className="text-xs text-muted-foreground shrink-0">({total} produtos)</span>
+            </div>
+            <button
+              onClick={() => { setDeepLinkMode('none'); setDeepLinkColecaoNome(''); setPage(1); setProdutos([]); setHasMore(true); window.history.replaceState({}, '', '/'); }}
+              className="text-xs text-primary font-medium px-2 py-1 rounded-lg hover:bg-primary/10 shrink-0"
+            >
+              Ver tudo
+            </button>
+          </div>
+        )}
+
         {/* Search bar */}
         <div className="relative mb-3">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
