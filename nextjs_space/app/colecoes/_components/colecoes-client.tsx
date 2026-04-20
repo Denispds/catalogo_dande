@@ -11,7 +11,7 @@ import Image from 'next/image';
 import {
   Loader2, FolderOpen, MessageCircle, Download, Plus, Pencil, Trash2, X,
   Search, ChevronDown, ArrowUpDown, Check, Package, Image as ImageIcon, CheckSquare, Square,
-  List, Grid3x3
+  List, Grid3x3, LayoutGrid, Rows3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -105,6 +105,7 @@ export default function ColecoesClient() {
   const [colecoes, setColecoes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [colViewMode, setColViewMode] = useState<'grid' | 'single'>('grid');
   const [shareProduct, setShareProduct] = useState<any>(null);
   const [shareColecao, setShareColecao] = useState<any>(null);
 
@@ -569,26 +570,54 @@ export default function ColecoesClient() {
                         <div className="px-4 pb-4 border-t border-border/20 pt-3">
                           {/* Action bar */}
                           <div className="flex items-center justify-between mb-3 gap-2">
-                            {isAdmin && (
+                            <div className="flex items-center gap-2">
+                              {isAdmin && (
+                                <button
+                                  onClick={() => {
+                                    setAddProductsColId(col?.id);
+                                    setSelectedToAdd(new Set());
+                                    setSearchBusca('');
+                                    setSearchFilters(defaultFilters);
+                                    setSearchOrdem('recente');
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-semibold active:scale-95 transition-all"
+                                >
+                                  <Plus size={14} /> Adicionar
+                                </button>
+                              )}
                               <button
-                                onClick={() => {
-                                  setAddProductsColId(col?.id);
-                                  setSelectedToAdd(new Set());
-                                  setSearchBusca('');
-                                  setSearchFilters(defaultFilters);
-                                  setSearchOrdem('recente');
-                                }}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-semibold active:scale-95 transition-all"
+                                onClick={() => setShareColecao(col)}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#25D366] text-white text-xs font-medium hover:bg-[#1fb855] active:scale-95 transition-all"
                               >
-                                <Plus size={14} /> Adicionar Produtos
+                                <MessageCircle size={14} /> WhatsApp
                               </button>
-                            )}
-                            <button
-                              onClick={() => setShareColecao(col)}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#25D366] text-white text-xs font-medium hover:bg-[#1fb855] active:scale-95 transition-all"
-                            >
-                              <MessageCircle size={14} /> WhatsApp
-                            </button>
+                            </div>
+
+                            {/* Layout toggle */}
+                            <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
+                              <button
+                                onClick={() => setColViewMode('single')}
+                                className={`p-1.5 rounded-md transition-all ${
+                                  colViewMode === 'single'
+                                    ? 'bg-primary text-white shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                                title="1 coluna"
+                              >
+                                <Rows3 size={14} />
+                              </button>
+                              <button
+                                onClick={() => setColViewMode('grid')}
+                                className={`p-1.5 rounded-md transition-all ${
+                                  colViewMode === 'grid'
+                                    ? 'bg-primary text-white shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                                title="2 colunas"
+                              >
+                                <LayoutGrid size={14} />
+                              </button>
+                            </div>
                           </div>
 
                           {/* Products grid */}
@@ -598,11 +627,14 @@ export default function ColecoesClient() {
                               <p>Nenhum produto nesta coleção</p>
                             </div>
                           ) : (
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className={`grid gap-3 transition-all ${
+                              colViewMode === 'single' ? 'grid-cols-1' : 'grid-cols-2'
+                            }`}>
                               {prods.map((cp: any) => (
                                 <div key={cp?.produto?.codigo ?? cp?.produtoCodigo} className="relative group/item">
                                   <ProductCard
                                     produto={cp?.produto}
+                                    layout={colViewMode === 'single' ? 'single' : 'grid'}
                                     onShare={(p: any) => setShareProduct(p)}
                                     onImageTap={(p: any, idx: number) => openLightbox(p, idx)}
                                   />

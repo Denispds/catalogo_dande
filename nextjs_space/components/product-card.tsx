@@ -289,7 +289,7 @@ export default function ProductCard({
       <div
         onClick={handleTap}
         className={`group relative bg-card rounded-2xl overflow-hidden transition-all duration-500 ease-out hover:shadow-xl active:scale-[0.99] gold-glow ${
-          selected ? 'ring-2 ring-primary shadow-lg shadow-primary/20' : 'dark:border dark:border-gold/10'
+          selected ? 'ring-2 ring-primary shadow-lg shadow-primary/20' : 'shadow-md dark:border dark:border-gold/10'
         }`}
       >
         {selectionMode && (
@@ -300,14 +300,27 @@ export default function ProductCard({
           </div>
         )}
 
-        <MediaRenderer aspectClass="aspect-[3/4]" objectFit="object-contain" />
+        <MediaRenderer aspectClass="aspect-[4/5]" objectFit="object-cover" />
 
         {(showPrice || showCode) && (
-          <div className="px-3 py-2">
-            <h3 className="text-xs font-medium leading-tight line-clamp-1 text-muted-foreground gold-text mb-0.5">{shortName(produto?.nome)}</h3>
+          <div className="px-4 py-3">
+            <h3 className="text-sm font-semibold leading-tight line-clamp-2 text-foreground gold-text mb-1">{produto?.nome}</h3>
             <div className="flex items-center justify-between">
-              {showCode && <span className="text-[10px] font-mono text-muted-foreground/70 gold-text-solid">{produto?.codigo}</span>}
-              {showPrice && <span className="text-sm font-bold text-primary gold-text">{fmt(produto?.preco ?? 0)}</span>}
+              {showCode && (
+                <span className="text-xs font-mono text-muted-foreground gold-text-solid">
+                  {produto?.departamento?.nome ? `${produto.departamento.nome} · ` : ''}{produto?.codigo}
+                </span>
+              )}
+              {showPrice && (
+                <div className="flex items-center gap-2">
+                  {produto?.precoOriginal && produto.precoOriginal > produto.preco && (
+                    <span className="text-xs text-muted-foreground line-through">
+                      R${Number(produto.precoOriginal).toFixed(2).replace('.', ',')}
+                    </span>
+                  )}
+                  <span className="text-base font-bold text-primary gold-text">{fmt(produto?.preco ?? 0)}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
