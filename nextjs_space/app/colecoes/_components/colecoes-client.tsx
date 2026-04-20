@@ -1360,7 +1360,9 @@ export default function ColecoesClient() {
               preco: cp?.produto?.preco,
               imagens: cp?.produto?.imagens ?? [],
               departamento: cp?.produto?.departamento,
+              categoria: cp?.produto?.categoria,
               ordem: cp?.ordem,
+              createdAt: cp?.produto?.createdAt,
             }))}
             onClose={() => setEditorCol(null)}
             onSave={async () => {

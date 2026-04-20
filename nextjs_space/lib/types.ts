@@ -32,7 +32,9 @@ export type CollectionProductData = {
   codigo?: string
   nome: string
   preco: number
-  imagens: { url: string }[]
-  departamento?: { nome: string }
+  imagens: { url: string; createdAt?: string }[]
+  departamento?: { id?: number; nome: string }
+  categoria?: { id?: number; nome: string }
   ordem?: number
+  createdAt?: string
 }
