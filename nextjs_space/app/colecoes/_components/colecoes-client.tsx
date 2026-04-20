@@ -1352,6 +1352,7 @@ export default function ColecoesClient() {
         {editorCol && (
           <CollectionEditor
             colecaoId={editorCol?.id}
+            colecaoNome={editorCol?.nome}
             initialProducts={(editorCol?.produtos ?? []).map((cp: any) => ({
               produtoCodigo: cp?.produtoCodigo,
               codigo: cp?.produto?.codigo,

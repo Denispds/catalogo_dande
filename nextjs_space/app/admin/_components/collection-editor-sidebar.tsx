@@ -1,16 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Loader2, Plus, ChevronDown } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Search, Loader2, Plus, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { CollectionProductData } from '@/lib/types';
 
-interface Category {
-  id: string;
+interface Departamento {
+  id: number;
   nome: string;
-  subcategorias?: { id: string; nome: string }[];
 }
 
 interface CollectionEditorSidebarProps {
@@ -24,229 +23,236 @@ export default function CollectionEditorSidebar({
   existingCodigos,
   onAddProduct,
 }: CollectionEditorSidebarProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
+  const [selectedDept, setSelectedDept] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState<CollectionProductData[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [selectedDept, setSelectedDept] = useState<string>('');
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [total, setTotal] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const loadingMore = useRef(false);
 
-  // Fetch categories
+  // Fetch departamentos
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchDepts = async () => {
       try {
-        const res = await fetch('/api/categorias');
+        const res = await fetch('/api/departamentos');
         const data = await res.json();
-        setCategories(data);
-        // Set first category as default
-        if (data.length > 0) {
-          setSelectedDept(data[0].id);
-          setExpandedCategories(new Set([data[0].id]));
-        }
+        setDepartamentos(data);
       } catch (error) {
-        console.error('Erro ao buscar categorias:', error);
-        toast.error('Erro ao carregar categorias');
+        console.error('Erro ao buscar departamentos:', error);
       }
     };
-    fetchCategories();
+    fetchDepts();
   }, []);
 
-  // Fetch products when department changes
-  useEffect(() => {
-    const fetchProducts = async () => {
-      if (!selectedDept && searchTerm.length < 2) {
-        setProducts([]);
-        return;
+  // Fetch products
+  const fetchProducts = useCallback(async (pageNum: number, append: boolean) => {
+    if (loadingMore.current && append) return;
+    if (!append) setLoading(true);
+    loadingMore.current = true;
+
+    try {
+      const params = new URLSearchParams({
+        limit: '30',
+        page: String(pageNum),
+        comImagem: 'true',
+        ordem: 'nome_asc',
+      });
+
+      if (searchTerm.length >= 2) {
+        params.set('busca', searchTerm);
+      }
+      if (selectedDept !== null && !searchTerm) {
+        params.set('departamento', String(selectedDept));
       }
 
-      setLoadingProducts(true);
-      try {
-        const params = new URLSearchParams({
-          limit: '50',
-          departamento: selectedDept,
-          comImagem: 'true',
-        });
+      const res = await fetch(`/api/produtos?${params}`);
+      const data = await res.json();
 
-        if (searchTerm.length >= 2) {
-          params.set('busca', searchTerm);
-        }
+      const available = (data.produtos || []).filter(
+        (p: any) => !existingCodigos.has(p.codigo)
+      );
 
-        const res = await fetch(`/api/produtos?${params}`);
-        const data = await res.json();
-        
-        // Filter out products already in collection
-        const available = (data.produtos || []).filter(
-          (p: CollectionProductData) => {
-            const codigo = (p.codigo || p.produtoCodigo) as string;
-            return !existingCodigos.has(codigo);
-          }
-        );
-        
+      if (append) {
+        setProducts(prev => [...prev, ...available]);
+      } else {
         setProducts(available);
-      } catch (error) {
-        console.error('Erro ao buscar produtos:', error);
-        toast.error('Erro ao carregar produtos');
-      } finally {
-        setLoadingProducts(false);
       }
-    };
 
-    fetchProducts();
+      setTotal(data.total || 0);
+      setHasMore((data.produtos || []).length >= 30);
+    } catch (error) {
+      console.error('Erro ao buscar produtos:', error);
+      toast.error('Erro ao carregar produtos');
+    } finally {
+      setLoading(false);
+      loadingMore.current = false;
+    }
   }, [selectedDept, searchTerm, existingCodigos]);
 
-  const toggleCategory = (catId: string) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(catId)) {
-      newExpanded.delete(catId);
-    } else {
-      newExpanded.add(catId);
+  // Reset and fetch when dept or search changes
+  useEffect(() => {
+    if (selectedDept === null && searchTerm.length < 2) {
+      setProducts([]);
+      setTotal(0);
+      return;
     }
-    setExpandedCategories(newExpanded);
-  };
+    setPage(1);
+    setHasMore(true);
+    fetchProducts(1, false);
+  }, [selectedDept, searchTerm, fetchProducts]);
 
-  const getProductCodigo = (product: CollectionProductData): string => {
-    return (product.codigo || product.produtoCodigo) as string;
-  };
+  // Infinite scroll
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || !hasMore || loadingMore.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollHeight - scrollTop - clientHeight < 150) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchProducts(nextPage, true);
+    }
+  }, [hasMore, page, fetchProducts]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  const getCode = (p: CollectionProductData) => (p.codigo || p.produtoCodigo) as string;
 
   return (
-    <div className="w-full sm:w-80 bg-muted/30 border-t sm:border-t-0 sm:border-r border-border/50 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="p-4 border-b border-border/50 flex-shrink-0">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Adicionar Produtos</h3>
-        
-        {/* Search */}
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Search */}
+      <div className="p-3 border-b border-border/50 flex-shrink-0">
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
           <input
             type="text"
-            placeholder="Buscar produto..."
+            placeholder="Buscar por nome ou codigo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-lg bg-background/80 text-xs border border-border/50 focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+            className="w-full pl-8 pr-8 py-2 rounded-lg bg-background/80 text-xs border border-border/50 focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Categories */}
+      {/* Departamentos - chips horizontais */}
       {!searchTerm && (
-        <div className="p-4 flex-shrink-0 border-b border-border/50">
-          <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Categorias</p>
-          <div className="space-y-1 max-h-48 overflow-y-auto">
-            {categories.map((cat) => (
-              <div key={cat.id}>
-                <button
-                  onClick={() => {
-                    setSelectedDept(cat.id);
-                    toggleCategory(cat.id);
-                  }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all ${
-                    selectedDept === cat.id
-                      ? 'bg-primary text-white font-semibold'
-                      : 'text-muted-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  <ChevronDown
-                    size={12}
-                    className={`transition-transform flex-shrink-0 ${
-                      expandedCategories.has(cat.id) ? 'rotate-0' : '-rotate-90'
-                    }`}
-                  />
-                  <span className="truncate">{cat.nome}</span>
-                </button>
-
-                {/* Subcategories */}
-                {expandedCategories.has(cat.id) && cat.subcategorias && (
-                  <div className="ml-4 space-y-0.5">
-                    {cat.subcategorias.map((sub) => (
-                      <button
-                        key={sub.id}
-                        onClick={() => {}}
-                        className="w-full text-left px-2 py-1 rounded text-xs text-muted-foreground/70 hover:bg-muted/30 transition-colors truncate"
-                      >
-                        {sub.nome}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+        <div className="p-3 border-b border-border/50 flex-shrink-0">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2 tracking-wider">Departamentos</p>
+          <div className="flex flex-wrap gap-1.5">
+            {departamentos.map((dept) => (
+              <button
+                key={dept.id}
+                onClick={() => setSelectedDept(selectedDept === dept.id ? null : dept.id)}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-all active:scale-95 ${
+                  selectedDept === dept.id
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {dept.nome}
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Products List */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {loadingProducts ? (
-          <div className="flex items-center justify-center py-8">
+      {/* Search info bar */}
+      {(selectedDept !== null || searchTerm.length >= 2) && (
+        <div className="px-3 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between flex-shrink-0">
+          <p className="text-[10px] text-muted-foreground">
+            {loading ? 'Buscando...' : `${products.length} de ${total} disponiveis`}
+          </p>
+          {searchTerm && (
+            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+              &quot;{searchTerm}&quot;
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Products list with infinite scroll */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-2">
+        {loading && products.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
             <Loader2 size={18} className="animate-spin text-primary" />
           </div>
         ) : products.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">
-              {searchTerm ? 'Nenhum produto encontrado' : 'Selecione uma categoria'}
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-xs">
+              {searchTerm
+                ? 'Nenhum produto encontrado'
+                : selectedDept === null
+                ? 'Selecione um departamento'
+                : 'Nenhum produto disponivel'}
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase mb-3">
-              {products.length} produto{products.length !== 1 ? 's' : ''} disponivel{products.length !== 1 ? 's' : ''}
-            </p>
-            <AnimatePresence mode="popLayout">
-              {products.map((product) => (
-                <motion.div
-                  key={getProductCodigo(product)}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="group/item"
-                >
-                  <button
-                    onClick={() => {
-                      onAddProduct(product);
-                      setProducts(products.filter(p => getProductCodigo(p) !== getProductCodigo(product)));
-                      toast.success(`${product.nome} adicionado!`);
-                    }}
-                    className="w-full p-2 rounded-lg bg-muted/50 hover:bg-card border border-border/30 hover:border-primary/50 transition-all flex gap-2 group/btn active:scale-95"
-                  >
-                    {/* Thumbnail */}
-                    <div className="flex-shrink-0 w-12 h-16 bg-muted rounded overflow-hidden relative">
-                      {product.imagens && product.imagens.length > 0 ? (
-                        <Image
-                          src={product.imagens[0]?.url || ''}
-                          alt={product.nome}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-lg">
-                          💎
-                        </div>
-                      )}
+          <div className="space-y-1.5">
+            {products.map((product) => (
+              <button
+                key={getCode(product)}
+                onClick={() => {
+                  onAddProduct(product);
+                  setProducts(prev => prev.filter(p => getCode(p) !== getCode(product)));
+                  setTotal(prev => Math.max(0, prev - 1));
+                }}
+                className="w-full p-2 rounded-lg hover:bg-card border border-transparent hover:border-primary/30 transition-all flex gap-2.5 active:scale-[0.98] group/btn"
+              >
+                {/* Thumbnail */}
+                <div className="flex-shrink-0 w-11 h-14 bg-muted rounded-lg overflow-hidden relative">
+                  {product.imagens && product.imagens.length > 0 ? (
+                    <Image
+                      src={product.imagens[0]?.url || ''}
+                      alt={product.nome}
+                      fill
+                      className="object-cover"
+                      sizes="44px"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-base bg-muted">
+                      💎
                     </div>
+                  )}
+                </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      <div className="text-left">
-                        <p className="text-xs font-mono text-muted-foreground/60">
-                          {getProductCodigo(product)}
-                        </p>
-                        <p className="text-xs font-semibold line-clamp-1 text-foreground">
-                          {product.nome}
-                        </p>
-                      </div>
-                      <p className="text-xs font-bold text-primary">
-                        R$ {Number(product.preco).toFixed(2).replace('.', ',')}
-                      </p>
-                    </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center text-left">
+                  <p className="text-[10px] font-mono text-muted-foreground/60">{getCode(product)}</p>
+                  <p className="text-xs font-medium line-clamp-1 text-foreground">{product.nome}</p>
+                  <p className="text-xs font-bold text-primary mt-0.5">
+                    R$ {Number(product.preco).toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
 
-                    {/* Add Button */}
-                    <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary opacity-0 group-hover/btn:opacity-100 transition-opacity">
-                      <Plus size={12} />
-                    </div>
-                  </button>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                {/* Add icon */}
+                <div className="flex-shrink-0 self-center w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover/btn:opacity-100 transition-opacity">
+                  <Plus size={12} />
+                </div>
+              </button>
+            ))}
+
+            {/* Load more indicator */}
+            {loadingMore.current && hasMore && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 size={16} className="animate-spin text-primary" />
+              </div>
+            )}
           </div>
         )}
       </div>
