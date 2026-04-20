@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, MessageCircle, Copy, Check } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, MessageCircle, Copy, Check, Link as LinkIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ShareModalProps {
@@ -16,6 +16,12 @@ export default function ShareModal({ produto, isOpen, onClose }: ShareModalProps
   const [includeBrand, setIncludeBrand] = useState(true);
   const [copied, setCopied] = useState(false);
 
+  const productLink = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/catalogo?produto=${produto?.codigo}`;
+  }, [produto?.codigo]);
+
   const buildMessage = () => {
     const parts: string[] = [];
     parts.push(`✨ *${produto?.nome ?? 'Produto'}*`);
@@ -29,6 +35,7 @@ export default function ShareModal({ produto, isOpen, onClose }: ShareModalProps
         parts.push(`💰 *R$ ${(produto?.preco ?? 0)?.toFixed?.(2)}*`);
       }
     }
+    parts.push(`\n🔗 ${productLink}`);
     parts.push('\n🛍 Dande Acessórios');
     return parts.join('\n');
   };
@@ -41,6 +48,16 @@ export default function ShareModal({ produto, isOpen, onClose }: ShareModalProps
   const handleCopy = async () => {
     try {
       await navigator?.clipboard?.writeText?.(buildMessage());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e: any) {
+      console.error('Copy error:', e);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator?.clipboard?.writeText?.(productLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e: any) {
@@ -99,10 +116,17 @@ export default function ShareModal({ produto, isOpen, onClose }: ShareModalProps
               </button>
               <button
                 onClick={handleCopy}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium transition-colors"
               >
                 {copied ? <Check size={18} className="text-green-600" /> : <Copy size={18} />}
                 {copied ? 'Copiado!' : 'Copiar'}
+              </button>
+              <button
+                onClick={handleCopyLink}
+                className="p-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium transition-colors flex items-center justify-center"
+                title="Copiar link do produto"
+              >
+                <LinkIcon size={18} />
               </button>
             </div>
           </motion.div>

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/header';
+import DeleteConfirmationModal from '@/components/delete-confirmation-modal';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -40,6 +41,7 @@ export default function AdminClient() {
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'product' | 'collection'; id?: string; nome?: string; loading?: boolean }>({ isOpen: false, type: 'product' });
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
@@ -104,13 +106,29 @@ export default function AdminClient() {
     setSaving(false);
   };
 
-  const handleDelete = async (codigo: string) => {
-    if (!confirm('Tem certeza que deseja deletar este produto?')) return;
+  const handleDelete = (codigo: string) => {
+    const product = produtos.find(p => p.codigo === codigo);
+    setDeleteModal({ 
+      isOpen: true, 
+      type: 'product', 
+      id: codigo,
+      nome: product?.nome ?? 'Produto'
+    });
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (!deleteModal.id) return;
+    setDeleteModal(prev => ({ ...prev, loading: true }));
     try {
-      await fetch(`/api/produtos/${codigo}`, { method: 'DELETE' });
-      toast.success('Produto deletado');
+      await fetch(`/api/produtos/${deleteModal.id}`, { method: 'DELETE' });
+      toast.success('Produto deletado com sucesso');
+      setDeleteModal({ isOpen: false, type: 'product' });
       fetchProdutos();
-    } catch (e: any) { toast.error('Erro ao deletar'); }
+    } catch (e: any) { 
+      toast.error('Erro ao deletar produto');
+      console.error(e);
+    }
+    setDeleteModal(prev => ({ ...prev, loading: false }));
   };
 
   const handleEdit = (p: any) => {
@@ -297,13 +315,29 @@ export default function AdminClient() {
     } catch (e: any) { toast.error('Erro ao criar coleção'); }
   };
 
-  const handleDeleteColecao = async (id: string) => {
-    if (!confirm('Deletar coleção?')) return;
+  const handleDeleteColecao = (id: string) => {
+    const collection = colecoes.find(c => c.id === id);
+    setDeleteModal({ 
+      isOpen: true, 
+      type: 'collection', 
+      id,
+      nome: collection?.nome ?? 'Coleção'
+    });
+  };
+
+  const confirmDeleteCollection = async () => {
+    if (!deleteModal.id) return;
+    setDeleteModal(prev => ({ ...prev, loading: true }));
     try {
-      await fetch(`/api/colecoes/${id}`, { method: 'DELETE' });
-      toast.success('Coleção removida');
-      setColecoes(colecoes?.filter?.((c: any) => c?.id !== id) ?? []);
-    } catch (e: any) { toast.error('Erro'); }
+      await fetch(`/api/colecoes/${deleteModal.id}`, { method: 'DELETE' });
+      toast.success('Coleção removida com sucesso');
+      setDeleteModal({ isOpen: false, type: 'product' });
+      setColecoes(colecoes?.filter?.((c: any) => c?.id !== deleteModal.id) ?? []);
+    } catch (e: any) { 
+      toast.error('Erro ao deletar coleção');
+      console.error(e);
+    }
+    setDeleteModal(prev => ({ ...prev, loading: false }));
   };
 
   const handleToggleAtivo = async (codigo: string, currentAtivo: boolean) => {
@@ -984,6 +1018,15 @@ export default function AdminClient() {
           </div>
         )}
 
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={deleteModal.isOpen}
+          title={`Deletar ${deleteModal.type === 'product' ? 'Produto' : 'Coleção'}`}
+          message={`Tem certeza que deseja deletar "${deleteModal.nome}"? Esta ação não pode ser desfeita.`}
+          onConfirm={deleteModal.type === 'product' ? confirmDeleteProduct : confirmDeleteCollection}
+          onCancel={() => setDeleteModal({ isOpen: false, type: 'product' })}
+          loading={deleteModal.loading}
+        />
       </main>
     </div>
   );

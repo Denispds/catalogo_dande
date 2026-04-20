@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, MessageCircle, Copy, Check } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, MessageCircle, Copy, Check, Link as LinkIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
@@ -14,6 +14,12 @@ interface Props {
 
 export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, showPrice = true, showCode = true }: Props) {
   const [copied, setCopied] = useState(false);
+
+  const collectionLink = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/catalogo?colecao=${colecao?.id}`;
+  }, [colecao?.id]);
 
   const buildMessage = () => {
     const parts: string[] = [];
@@ -29,7 +35,8 @@ export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, show
       parts.push(line);
     });
     parts.push('');
-    parts.push('🛍 Dande Acessórios');
+    parts.push(`🔗 ${collectionLink}`);
+    parts.push('\n🛍 Dande Acessórios');
     return parts.join('\n');
   };
 
@@ -40,6 +47,14 @@ export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, show
   const handleCopy = async () => {
     try {
       await navigator?.clipboard?.writeText?.(buildMessage());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e: any) { console.error(e); }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator?.clipboard?.writeText?.(collectionLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e: any) { console.error(e); }
@@ -61,9 +76,16 @@ export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, show
               <button onClick={handleWhatsApp} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#25D366] text-white font-medium text-sm hover:bg-[#1fb855] transition-colors">
                 <MessageCircle size={18} /> WhatsApp
               </button>
-              <button onClick={handleCopy} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-muted text-sm font-medium">
+              <button onClick={handleCopy} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium transition-colors">
                 {copied ? <Check size={18} className="text-green-600" /> : <Copy size={18} />}
                 {copied ? 'Copiado!' : 'Copiar'}
+              </button>
+              <button
+                onClick={handleCopyLink}
+                className="p-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium transition-colors flex items-center justify-center"
+                title="Copiar link da coleção"
+              >
+                <LinkIcon size={18} />
               </button>
             </div>
           </motion.div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from '@/components/header';
 import ProductCard from '@/components/product-card';
 import FilterPanel from '@/components/filter-panel';
@@ -19,6 +20,7 @@ const ordemOptions = [
 ];
 
 export default function CatalogClient() {
+  const searchParams = useSearchParams();
   const [produtos, setProdutos] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -59,6 +61,46 @@ export default function CatalogClient() {
     setLightboxProduto(produto);
     setLightboxOpen(true);
   };
+
+  // Handle deep links (produto=CODIGO or colecao=ID)
+  useEffect(() => {
+    const produtoCodigo = searchParams?.get?.('produto');
+    const colecaoId = searchParams?.get?.('colecao');
+
+    if (produtoCodigo) {
+      // Load specific product
+      fetch(`/api/produtos/${produtoCodigo}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data?.id || data?.codigo) {
+            // Set the product for sharing modal, but don't auto-open
+            setShareProduct(data);
+            // Auto-open lightbox if product has images
+            if (data?.imagens?.length > 0) {
+              setLightboxImages(data.imagens);
+              setLightboxIndex(0);
+              setLightboxProduto(data);
+              setLightboxOpen(true);
+            }
+          }
+        })
+        .catch(e => console.error('Failed to load product:', e));
+    } else if (colecaoId) {
+      // Load specific collection
+      fetch(`/api/colecoes/${colecaoId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data?.id) {
+            // Show products from this collection
+            const colecaoProdutos = data?.produtos ?? [];
+            setProdutos(colecaoProdutos.map((cp: any) => cp?.produto ?? cp));
+            setTotal(colecaoProdutos.length);
+            setHasMore(false);
+          }
+        })
+        .catch(e => console.error('Failed to load collection:', e));
+    }
+  }, [searchParams]);
 
   const fetchProdutos = useCallback(async (pageNum?: number, isLoadingMore: boolean = false) => {
     const pageToFetch = pageNum ?? page;
