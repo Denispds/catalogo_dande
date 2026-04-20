@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { generateCatalogName } from '@/lib/catalog-naming';
+import CollectionEditor from '@/app/admin/_components/collection-editor';
 
 const defaultFilters = { departamento: '', categoria: '', subcategoria: '', precoMin: '', precoMax: '', descontoMin: '' };
 const ordemOptions = [
@@ -108,6 +109,9 @@ export default function ColecoesClient() {
   const [colViewMode, setColViewMode] = useState<'grid' | 'single'>('grid');
   const [shareProduct, setShareProduct] = useState<any>(null);
   const [shareColecao, setShareColecao] = useState<any>(null);
+
+  // Collection Editor
+  const [editorCol, setEditorCol] = useState<any>(null);
 
   // Lightbox
   const [lightboxImages, setLightboxImages] = useState<{ url: string }[]>([]);
@@ -570,20 +574,28 @@ export default function ColecoesClient() {
                         <div className="px-4 pb-4 border-t border-border/20 pt-3">
                           {/* Action bar */}
                           <div className="flex items-center justify-between mb-3 gap-2">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               {isAdmin && (
-                                <button
-                                  onClick={() => {
-                                    setAddProductsColId(col?.id);
-                                    setSelectedToAdd(new Set());
-                                    setSearchBusca('');
-                                    setSearchFilters(defaultFilters);
-                                    setSearchOrdem('recente');
-                                  }}
-                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-semibold active:scale-95 transition-all"
-                                >
-                                  <Plus size={14} /> Adicionar
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setAddProductsColId(col?.id);
+                                      setSelectedToAdd(new Set());
+                                      setSearchBusca('');
+                                      setSearchFilters(defaultFilters);
+                                      setSearchOrdem('recente');
+                                    }}
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-semibold active:scale-95 transition-all"
+                                  >
+                                    <Plus size={14} /> Adicionar
+                                  </button>
+                                  <button
+                                    onClick={() => setEditorCol(col)}
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs font-semibold active:scale-95 transition-all"
+                                  >
+                                    <Pencil size={14} /> Editar
+                                  </button>
+                                </>
                               )}
                               <button
                                 onClick={() => setShareColecao(col)}
@@ -1336,6 +1348,27 @@ export default function ColecoesClient() {
       </AnimatePresence>
 
       {/* ===== MODALS ===== */}
+      <AnimatePresence>
+        {editorCol && (
+          <CollectionEditor
+            colecaoId={editorCol?.id}
+            initialProducts={(editorCol?.produtos ?? []).map((cp: any) => ({
+              produtoCodigo: cp?.produtoCodigo,
+              codigo: cp?.produto?.codigo,
+              nome: cp?.produto?.nome,
+              preco: cp?.produto?.preco,
+              imagens: cp?.produto?.imagens ?? [],
+              departamento: cp?.produto?.departamento,
+              ordem: cp?.ordem,
+            }))}
+            onClose={() => setEditorCol(null)}
+            onSave={async () => {
+              await fetchColecoes();
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       <ShareModal produto={shareProduct} isOpen={!!shareProduct} onClose={() => setShareProduct(null)} />
       <WhatsAppCollectionShare colecao={shareColecao} isOpen={!!shareColecao} onClose={() => setShareColecao(null)} />
       <ImageLightbox

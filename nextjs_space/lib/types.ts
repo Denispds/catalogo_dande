@@ -26,3 +26,13 @@ export type DateRange = {
   from: Date | undefined
   to: Date | undefined
 }
+
+export type CollectionProductData = {
+  produtoCodigo?: string
+  codigo?: string
+  nome: string
+  preco: number
+  imagens: { url: string }[]
+  departamento?: { nome: string }
+  ordem?: number
+}
