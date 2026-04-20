@@ -1,11 +1,19 @@
 export const dynamic = 'force-dynamic';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const departamentoId = searchParams.get('departamento');
+
+    const where: any = { ativo: true };
+    if (departamentoId) {
+      where.departamentoId = Number(departamentoId);
+    }
+
     const categorias = await prisma.catCategoria.findMany({
-      where: { ativo: true },
+      where,
       orderBy: { ordem: 'asc' },
       include: { subcategorias: { where: { ativo: true } } },
     });
