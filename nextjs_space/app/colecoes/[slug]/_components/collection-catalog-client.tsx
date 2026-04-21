@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import Header from '@/components/header';
 import ProductCard from '@/components/product-card';
 import ShareModal from '@/components/share-modal';
@@ -27,6 +28,7 @@ interface ColecaoInfo {
   slug: string | null;
   descricao: string | null;
   cor: string;
+  imagemCapa?: string | null;
 }
 
 interface Props {
@@ -41,6 +43,9 @@ export default function CollectionCatalogClient({ colecao }: Props) {
   const [buscaInput, setBuscaInput] = useState('');
   const [ordem, setOrdem] = useState('ordem');
   const searchTimeoutRef = useRef<any>(null);
+  
+  // Filters
+  const [filters, setFilters] = useState<{ departamento?: string; categoria?: string; precoMin?: string; precoMax?: string }>({});
 
   // Layout & selection state
   const [layout, setLayout] = useState<'grid' | 'single' | 'list'>('grid');
@@ -48,6 +53,10 @@ export default function CollectionCatalogClient({ colecao }: Props) {
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [hideInfoOnExport, setHideInfoOnExport] = useState(false);
   const [exportColumns, setExportColumns] = useState(2);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   // Share & lightbox state
   const [shareProduct, setShareProduct] = useState<any>(null);
@@ -85,9 +94,10 @@ export default function CollectionCatalogClient({ colecao }: Props) {
       .catch(e => { console.error(e); setLoading(false); });
   }, [colecao.id]);
 
-  // Filter & sort when busca/ordem change
+  // Filter & sort when busca/ordem/filters change
   useEffect(() => {
     let filtered = [...allProdutos];
+    
     if (busca) {
       const term = busca.toLowerCase();
       filtered = filtered.filter((p: any) =>
@@ -95,6 +105,25 @@ export default function CollectionCatalogClient({ colecao }: Props) {
         (p?.codigo ?? '').toLowerCase().includes(term)
       );
     }
+    
+    // Apply department filter
+    if (filters.departamento) {
+      filtered = filtered.filter((p: any) => p?.departamento?.id === filters.departamento);
+    }
+    
+    // Apply category filter
+    if (filters.categoria) {
+      filtered = filtered.filter((p: any) => p?.categoria?.id === filters.categoria);
+    }
+    
+    // Apply price range filter
+    const precoMin = filters.precoMin ? parseFloat(filters.precoMin) : 0;
+    const precoMax = filters.precoMax ? parseFloat(filters.precoMax) : Infinity;
+    filtered = filtered.filter((p: any) => {
+      const preco = p?.preco ?? 0;
+      return preco >= precoMin && preco <= precoMax;
+    });
+    
     // Sort
     filtered.sort((a: any, b: any) => {
       switch (ordem) {
@@ -106,14 +135,20 @@ export default function CollectionCatalogClient({ colecao }: Props) {
       }
     });
     setProdutos(filtered);
-  }, [busca, ordem, allProdutos]);
+  }, [busca, ordem, allProdutos, filters]);
 
   const handleSearchInput = (e: any) => {
     const val = e?.target?.value ?? '';
     setBuscaInput(val);
+    setCurrentPage(1);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => setBusca(val), 300);
   };
+  
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, ordem]);
 
   const clearSearch = () => {
     setBuscaInput('');
@@ -238,6 +273,20 @@ export default function CollectionCatalogClient({ colecao }: Props) {
             <span className="text-foreground font-medium truncate">{colecao.nome}</span>
           </div>
 
+          {/* Collection cover image banner */}
+          {colecao.imagemCapa && (
+            <div className="relative w-full mb-4 rounded-2xl overflow-hidden shadow-md border border-border/50 h-40">
+              <Image
+                src={colecao.imagemCapa}
+                alt={colecao.nome}
+                fill
+                className="object-cover"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            </div>
+          )}
+
           {/* Collection info card */}
           <div
             className="p-4 rounded-2xl border border-border/50 shadow-sm"
@@ -295,6 +344,49 @@ export default function CollectionCatalogClient({ colecao }: Props) {
             </button>
           )}
         </div>
+
+        {/* Simple inline filters */}
+        {(() => {
+          const depts = [...new Set(allProdutos.map((p: any) => p?.departamento).filter(Boolean))];
+          const cats = [...new Set(allProdutos.map((p: any) => p?.categoria).filter(Boolean))];
+          const hasFilters = depts.length > 0 || cats.length > 0;
+          return hasFilters ? (
+            <div className="mb-3 p-3 rounded-2xl bg-muted/30 border border-border/30 space-y-2">
+              {depts.length > 0 && (
+                <select
+                  value={filters.departamento ?? ''}
+                  onChange={(e) => setFilters({ ...filters, departamento: e.target.value || undefined })}
+                  className="w-full text-[11px] px-2 py-1.5 rounded-lg bg-card border border-border/50 outline-none focus:border-primary/50"
+                >
+                  <option value="">Todos os departamentos</option>
+                  {depts.map((d: any) => (
+                    <option key={d?.id} value={d?.id}>{d?.nome}</option>
+                  ))}
+                </select>
+              )}
+              {cats.length > 0 && (
+                <select
+                  value={filters.categoria ?? ''}
+                  onChange={(e) => setFilters({ ...filters, categoria: e.target.value || undefined })}
+                  className="w-full text-[11px] px-2 py-1.5 rounded-lg bg-card border border-border/50 outline-none focus:border-primary/50"
+                >
+                  <option value="">Todas as categorias</option>
+                  {cats.map((c: any) => (
+                    <option key={c?.id} value={c?.id}>{c?.nome}</option>
+                  ))}
+                </select>
+              )}
+              {(filters.departamento || filters.categoria) && (
+                <button
+                  onClick={() => setFilters({})}
+                  className="w-full text-[10px] px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 font-medium transition-colors"
+                >
+                  Limpar filtros
+                </button>
+              )}
+            </div>
+          ) : null;
+        })()}
 
         {/* Controls row */}
         <div className="flex items-center gap-1.5 mb-4">
@@ -428,42 +520,74 @@ export default function CollectionCatalogClient({ colecao }: Props) {
           </div>
         )}
 
-        {/* Products */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <div className="w-10 h-10 rounded-full border-2 border-pink-200 dark:border-gold/30 border-t-pink-500 dark:border-t-gold animate-spin" />
-            <span className="text-sm text-muted-foreground">Carregando...</span>
-          </div>
-        ) : produtos?.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
-            <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center">
-              <Package size={32} className="text-muted-foreground/50" />
+        {/* Products with pagination */}
+        {(() => {
+          const totalPages = Math.ceil(produtos.length / itemsPerPage);
+          const startIdx = (currentPage - 1) * itemsPerPage;
+          const endIdx = startIdx + itemsPerPage;
+          const pageProducts = produtos.slice(startIdx, endIdx);
+
+          return loading ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-3">
+              <div className="w-10 h-10 rounded-full border-2 border-pink-200 dark:border-gold/30 border-t-pink-500 dark:border-t-gold animate-spin" />
+              <span className="text-sm text-muted-foreground">Carregando...</span>
             </div>
-            <p className="text-sm font-medium">Nenhum produto encontrado</p>
-            {busca && <p className="text-xs text-muted-foreground/70">Tente outro termo de busca</p>}
-          </div>
-        ) : (
-          <div className={
-            layout === 'list' ? 'flex flex-col gap-2' :
-            layout === 'single' ? 'flex flex-col gap-3' :
-            'grid grid-cols-2 gap-2.5'
-          }>
-            {produtos?.map?.((p: any) => (
-              <ProductCard
-                key={p?.codigo}
-                produto={p}
-                layout={layout}
-                onShare={(prod: any) => setShareProduct(prod)}
-                showPrice={showPrice}
-                showCode={showCode}
-                selectionMode={selectionMode}
-                selected={selectedCodes.has(p?.codigo)}
-                onSelect={toggleSelect}
-                onImageTap={handleImageTap}
-              />
-            ))}
-          </div>
-        )}
+          ) : produtos?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
+              <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center">
+                <Package size={32} className="text-muted-foreground/50" />
+              </div>
+              <p className="text-sm font-medium">Nenhum produto encontrado</p>
+              {busca && <p className="text-xs text-muted-foreground/70">Tente outro termo de busca</p>}
+            </div>
+          ) : (
+            <>
+              <div className={
+                layout === 'list' ? 'flex flex-col gap-2' :
+                layout === 'single' ? 'flex flex-col gap-3' :
+                'grid grid-cols-2 gap-2.5'
+              }>
+                {pageProducts?.map?.((p: any) => (
+                  <ProductCard
+                    key={p?.codigo}
+                    produto={p}
+                    layout={layout}
+                    onShare={(prod: any) => setShareProduct(prod)}
+                    showPrice={showPrice}
+                    showCode={showCode}
+                    selectionMode={selectionMode}
+                    selected={selectedCodes.has(p?.codigo)}
+                    onSelect={toggleSelect}
+                    onImageTap={handleImageTap}
+                  />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6 mb-4">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-card border border-border/50 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-[11px] text-muted-foreground font-medium">
+                    {currentPage} de {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-card border border-border/50 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </main>
 
       <ShareModal

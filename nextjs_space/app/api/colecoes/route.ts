@@ -35,14 +35,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nome, descricao, cor } = body ?? {};
+    const { nome, descricao, cor, imagemCapa } = body ?? {};
     if (!nome) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 });
     let slug = generateSlug(nome);
     // Ensure unique slug
     const existing = await prisma.catColecao.findFirst({ where: { slug } });
     if (existing) slug = slug + '-' + Date.now().toString(36);
     const colecao = await prisma.catColecao.create({
-      data: { nome, slug, descricao: descricao ?? '', cor: cor ?? '#E91E8C', ativa: true },
+      data: { nome, slug, descricao: descricao ?? '', cor: cor ?? '#E91E8C', imagemCapa: imagemCapa ?? null, ativa: true },
     });
     return NextResponse.json(colecao, { status: 201 });
   } catch (error: any) {

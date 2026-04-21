@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CollectionPage({ params }: Props) {
   const colecao = await prisma.catColecao.findFirst({
     where: { slug: params.slug, ativa: true },
-    select: { id: true, nome: true, slug: true, descricao: true, cor: true },
+    select: { id: true, nome: true, slug: true, descricao: true, cor: true, imagemCapa: true },
   });
 
   if (!colecao) {

@@ -523,8 +523,9 @@ export default function ColecoesClient() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-bold text-sm truncate">{col?.nome ?? ''}</p>
-                        <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">
-                          {prods.length} itens
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full flex-shrink-0 whitespace-nowrap">
+                          <Package size={12} />
+                          {prods.length}
                         </span>
                       </div>
                       {col?.descricao && <p className="text-[11px] text-muted-foreground truncate mb-1">{col.descricao}</p>}
