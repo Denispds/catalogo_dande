@@ -87,21 +87,24 @@ export default function CatalogClient() {
         })
         .catch(e => console.error('Failed to load product:', e));
     } else if (colecaoId) {
-      setDeepLinkMode('colecao');
-      setLoading(true);
-      // Load specific collection
+      // Redirect to /colecoes/[slug] if available
       fetch(`/api/colecoes/${colecaoId}`)
         .then(r => r.json())
         .then(data => {
-          if (data?.id) {
+          if (data?.slug) {
+            window.location.replace(`/colecoes/${data.slug}`);
+          } else if (data?.id) {
+            setDeepLinkMode('colecao');
             setDeepLinkColecaoNome(data?.nome ?? 'Coleção');
             const colecaoProdutos = data?.produtos ?? [];
             const mapped = colecaoProdutos.map((cp: any) => cp?.produto ?? cp);
             setProdutos(mapped);
             setTotal(mapped.length);
             setHasMore(false);
+            setLoading(false);
+          } else {
+            setLoading(false);
           }
-          setLoading(false);
         })
         .catch(e => { console.error('Failed to load collection:', e); setLoading(false); });
     }

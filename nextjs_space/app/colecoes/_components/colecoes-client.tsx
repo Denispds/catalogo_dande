@@ -8,6 +8,7 @@ import ShareModal from '@/components/share-modal';
 import WhatsAppCollectionShare from '@/components/whatsapp-collection-share';
 import ImageLightbox from '@/components/image-lightbox';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Loader2, FolderOpen, MessageCircle, Download, Plus, Pencil, Trash2, X,
   Search, ChevronDown, ArrowUpDown, Check, Package, Image as ImageIcon, CheckSquare, Square,
@@ -603,6 +604,14 @@ export default function ColecoesClient() {
                               >
                                 <MessageCircle size={14} /> WhatsApp
                               </button>
+                              {col?.slug && (
+                                <Link
+                                  href={`/colecoes/${col.slug}`}
+                                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-medium hover:bg-primary/90 active:scale-95 transition-all"
+                                >
+                                  <Package size={14} /> Ver catálogo
+                                </Link>
+                              )}
                             </div>
 
                             {/* Layout toggle */}

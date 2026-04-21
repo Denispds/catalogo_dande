@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { generateSlug } from '@/lib/slug';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,8 +37,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { nome, descricao, cor } = body ?? {};
     if (!nome) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 });
+    let slug = generateSlug(nome);
+    // Ensure unique slug
+    const existing = await prisma.catColecao.findFirst({ where: { slug } });
+    if (existing) slug = slug + '-' + Date.now().toString(36);
     const colecao = await prisma.catColecao.create({
-      data: { nome, descricao: descricao ?? '', cor: cor ?? '#E91E8C', ativa: true },
+      data: { nome, slug, descricao: descricao ?? '', cor: cor ?? '#E91E8C', ativa: true },
     });
     return NextResponse.json(colecao, { status: 201 });
   } catch (error: any) {

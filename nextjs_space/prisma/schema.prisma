@@ -104,6 +104,7 @@ model CatImagem {
 model CatColecao {
   id        String   @id @default(uuid())
   nome      String
+  slug      String?  @unique
   descricao String?
   cor       String   @default("#E91E8C")
   ativa     Boolean  @default(true)

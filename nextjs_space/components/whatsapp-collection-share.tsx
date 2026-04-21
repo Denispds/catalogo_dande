@@ -18,8 +18,9 @@ export default function WhatsAppCollectionShare({ colecao, isOpen, onClose, show
   const collectionLink = useMemo(() => {
     if (typeof window === 'undefined') return '';
     const baseUrl = window.location.origin;
+    if (colecao?.slug) return `${baseUrl}/colecoes/${colecao.slug}`;
     return `${baseUrl}/?colecao=${colecao?.id}`;
-  }, [colecao?.id]);
+  }, [colecao?.id, colecao?.slug]);
 
   const buildMessage = () => {
     const parts: string[] = [];

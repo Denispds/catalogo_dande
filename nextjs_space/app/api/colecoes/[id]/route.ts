@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { generateSlug } from '@/lib/slug';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -36,7 +37,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json();
     const { nome, descricao, cor, ativa } = body ?? {};
     const data: any = {};
-    if (nome !== undefined) data.nome = nome;
+    if (nome !== undefined) {
+      data.nome = nome;
+      let slug = generateSlug(nome);
+      const existing = await prisma.catColecao.findFirst({ where: { slug, NOT: { id: params?.id } } });
+      if (existing) slug = slug + '-' + Date.now().toString(36);
+      data.slug = slug;
+    }
     if (descricao !== undefined) data.descricao = descricao;
     if (cor !== undefined) data.cor = cor;
     if (ativa !== undefined) data.ativa = ativa;
