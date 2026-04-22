@@ -365,7 +365,7 @@ export default function CollectionEditorSidebar({
           </p>
           {searchTerm && (
             <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full max-w-[120px] truncate">
-              "{searchTerm}"
+              &quot;{searchTerm}&quot;
             </span>
           )}
         </div>
