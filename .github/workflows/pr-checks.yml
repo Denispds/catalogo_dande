@@ -7,28 +7,43 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
-      
+          cache: 'yarn'
+          cache-dependency-path: nextjs_space/yarn.lock
+
+      # Sanitize Prisma schema (remove absolute output path used only by Abacus env)
+      - name: Sanitize Prisma schema for CI
+        working-directory: ./nextjs_space
+        run: sed -i '/^\s*output\s*=/d' prisma/schema.prisma
+
       - name: Install dependencies
         working-directory: ./nextjs_space
         run: yarn install --frozen-lockfile
-      
+
+      - name: Generate Prisma Client
+        working-directory: ./nextjs_space
+        run: yarn prisma generate
+
       - name: Type check
         working-directory: ./nextjs_space
         run: yarn tsc --noEmit
-      
+
       - name: Build
         working-directory: ./nextjs_space
+        env:
+          NEXTAUTH_SECRET: ci-dummy-secret-for-build-only
+          NEXTAUTH_URL: http://localhost:3000
+          DATABASE_URL: postgresql://user:pass@localhost:5432/db
         run: yarn build
-      
+
       - name: Comment PR on success
         if: success()
         uses: actions/github-script@v6
@@ -41,7 +56,7 @@ jobs:
               repo: context.repo.repo,
               body: '✅ Build passed! Type checking and compilation successful.'
             })
-      
+
       - name: Comment PR on failure
         if: failure()
         uses: actions/github-script@v6

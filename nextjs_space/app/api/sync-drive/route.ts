@@ -50,13 +50,13 @@ export async function POST(request: Request) {
       where: { driveFileId: { not: null } },
       select: { driveFileId: true },
     });
-    const importedIds = new Set(existingImports.map(i => i.driveFileId));
+    const importedIds = new Set(existingImports.map((i: { driveFileId: string | null }) => i.driveFileId));
 
     // 3. Buscar todos os códigos de produtos existentes
     const allProducts = await prisma.catProduto.findMany({
       select: { codigo: true },
     });
-    const productCodes = new Set(allProducts.map(p => p.codigo));
+    const productCodes = new Set(allProducts.map((p: { codigo: string }) => p.codigo));
 
     // 4. Encontrar/criar pasta Concluidas
     let concluidasFolderId: string | null = null;

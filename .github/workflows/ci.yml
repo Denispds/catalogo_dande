@@ -9,42 +9,61 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         node-version: [18.x]
-    
+
     steps:
       # Checkout do código
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       # Setup Node.js
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      
+          cache: 'yarn'
+          cache-dependency-path: nextjs_space/yarn.lock
+
+      # Sanitize Prisma schema (remove absolute output path used only by Abacus env)
+      - name: Sanitize Prisma schema for CI
+        working-directory: ./nextjs_space
+        run: |
+          sed -i '/^\s*output\s*=/d' prisma/schema.prisma
+          echo "Schema sanitized:"
+          head -10 prisma/schema.prisma
+
       # Install dependencies
       - name: Install dependencies
         working-directory: ./nextjs_space
         run: yarn install --frozen-lockfile
-      
+
+      # Generate Prisma Client (required for TypeScript types)
+      - name: Generate Prisma Client
+        working-directory: ./nextjs_space
+        run: yarn prisma generate
+
       # Check TypeScript
       - name: Run TypeScript check
         working-directory: ./nextjs_space
         run: yarn tsc --noEmit
-      
+
       # Build the Next.js app
       - name: Build Next.js application
         working-directory: ./nextjs_space
+        env:
+          NEXTAUTH_SECRET: ci-dummy-secret-for-build-only
+          NEXTAUTH_URL: http://localhost:3000
+          DATABASE_URL: postgresql://user:pass@localhost:5432/db
         run: yarn build
-      
+
       # Success notification
       - name: Build successful ✅
         if: success()
         run: echo "Build completed successfully!"
-      
+
       # Failure notification
       - name: Build failed ❌
         if: failure()
