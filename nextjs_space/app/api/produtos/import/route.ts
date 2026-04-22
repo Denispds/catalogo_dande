@@ -37,13 +37,13 @@ export async function POST(request: NextRequest) {
 
     // Carregar existentes
     const existingDeps = await prisma.catDepartamento.findMany();
-    existingDeps.forEach(d => depCache.set(d.nome.toLowerCase().trim(), d.id));
+    existingDeps.forEach((d: { nome: string; id: number }) => depCache.set(d.nome.toLowerCase().trim(), d.id));
 
     const existingCats = await prisma.catCategoria.findMany();
-    existingCats.forEach(c => catCache.set(c.nome.toLowerCase().trim(), c.id));
+    existingCats.forEach((c: { nome: string; id: number }) => catCache.set(c.nome.toLowerCase().trim(), c.id));
 
     const existingSubs = await prisma.catSubcategoria.findMany();
-    existingSubs.forEach(s => subCache.set(`${s.categoriaId}_${s.nome.toLowerCase().trim()}`, s.id));
+    existingSubs.forEach((s: { categoriaId: number; nome: string; id: number }) => subCache.set(`${s.categoriaId}_${s.nome.toLowerCase().trim()}`, s.id));
 
     // --- Helper: buscar ou criar departamento ---
     async function getOrCreateDepartamento(nome: string): Promise<number> {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       where: { codigo: { in: allCodigos } },
       select: { codigo: true },
     });
-    const existingSet = new Set(existingProducts.map(p => p.codigo));
+    const existingSet = new Set(existingProducts.map((p: { codigo: string }) => p.codigo));
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
