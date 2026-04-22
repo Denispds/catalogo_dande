@@ -16,13 +16,11 @@ export async function GET(request: NextRequest) {
     const page = parseInt(url.searchParams.get('page') ?? '1', 10);
     const limit = parseInt(url.searchParams.get('limit') ?? '12', 10);
     const ativo = url.searchParams.get('ativo');
-
     const comImagem = url.searchParams.get('comImagem') ?? '';
 
     const where: any = {};
     if (ativo !== 'all') where.ativo = true;
 
-    // Se comImagem=true, mostrar APENAS produtos com imagem (independente de busca)
     if (comImagem === 'true') {
       where.imagens = { some: {} };
     }
@@ -39,73 +37,111 @@ export async function GET(request: NextRequest) {
     if (precoMin) where.preco = { ...(where.preco ?? {}), gte: parseFloat(precoMin) };
     if (precoMax) where.preco = { ...(where.preco ?? {}), lte: parseFloat(precoMax) };
 
-    // Determine if we need to sort by image date
+    const hasDiscountFilter = !!descontoMin;
     const sortByImageDate = ordem === 'recente' || ordem === 'antigo';
 
-    let orderBy: any = { nome: 'asc' };
-    if (!sortByImageDate) {
-      if (ordem === 'nome_desc') orderBy = { nome: 'desc' };
-      else if (ordem === 'preco_asc') orderBy = { preco: 'asc' };
-      else if (ordem === 'preco_desc') orderBy = { preco: 'desc' };
-    }
-
-    const total = await prisma.catProduto.count({ where });
-    
-    // Fetch all matching products with their images for proper sorting
-    const allProdutos = await prisma.catProduto.findMany({
-      where,
-      include: {
-        departamento: true,
-        categoria: true,
-        imagens: { orderBy: [{ principal: 'desc' }, { ordem: 'asc' }] },
-      },
-    });
-
-    // Sort by image date if needed
-    let sorted = allProdutos;
-    if (sortByImageDate) {
-      sorted = allProdutos.sort((a: any, b: any) => {
-        // Get the most recent image date for each product
-        const aImageDate = a.imagens && a.imagens.length > 0 
-          ? new Date(a.imagens[0].createdAt).getTime()
-          : new Date(a.createdAt).getTime();
-        const bImageDate = b.imagens && b.imagens.length > 0
-          ? new Date(b.imagens[0].createdAt).getTime()
-          : new Date(b.createdAt).getTime();
-        
-        return ordem === 'recente' 
-          ? bImageDate - aImageDate  // Most recent first
-          : aImageDate - bImageDate;  // Oldest first
+    // If we have special filters that require post-processing, use a hybrid approach
+    if (hasDiscountFilter || sortByImageDate) {
+      // For discount filter: fetch all matching, filter in memory, paginate
+      // For image-date sort: fetch all, sort by image date, paginate
+      // To avoid huge payloads, we fetch only the fields needed for sorting/filtering first
+      const candidates = await prisma.catProduto.findMany({
+        where,
+        select: {
+          codigo: true,
+          nome: true,
+          preco: true,
+          precoOriginal: true,
+          createdAt: true,
+          imagens: sortByImageDate
+            ? { select: { createdAt: true, principal: true, ordem: true }, orderBy: [{ principal: 'desc' }, { ordem: 'asc' }], take: 1 }
+            : false,
+        },
       });
-    } else {
-      // Apply other sorting options
-      if (ordem === 'nome_asc') {
-        sorted = sorted.sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'));
-      } else if (ordem === 'nome_desc') {
-        sorted = sorted.sort((a: any, b: any) => b.nome.localeCompare(a.nome, 'pt-BR'));
-      } else if (ordem === 'preco_asc') {
-        sorted = sorted.sort((a: any, b: any) => a.preco - b.preco);
-      } else if (ordem === 'preco_desc') {
-        sorted = sorted.sort((a: any, b: any) => b.preco - a.preco);
+
+      // Apply discount filter in-memory
+      let filteredIds: string[] = candidates.map((p: any) => p.codigo);
+      if (hasDiscountFilter) {
+        const minDisc = parseFloat(descontoMin);
+        filteredIds = candidates
+          .filter((p: any) => {
+            if (!p?.precoOriginal || p.precoOriginal <= 0) return false;
+            const disc = ((p.precoOriginal - p.preco) / p.precoOriginal) * 100;
+            return disc >= minDisc;
+          })
+          .map((p: any) => p.codigo);
       }
-    }
 
-    // Apply pagination
-    const produtos = sorted.slice((page - 1) * limit, page * limit);
+      // Filter candidates to only those that pass discount filter
+      const filtered = candidates.filter((p: any) => filteredIds.includes(p.codigo));
 
-    // Apply discount filter in-memory (complex calc)
-    let filtered = produtos;
-    if (descontoMin) {
-      const minDisc = parseFloat(descontoMin);
-      filtered = produtos.filter((p: any) => {
-        if (!p?.precoOriginal || p.precoOriginal <= 0) return false;
-        const disc = ((p.precoOriginal - p.preco) / p.precoOriginal) * 100;
-        return disc >= minDisc;
+      // Sort
+      let sorted = filtered;
+      if (sortByImageDate) {
+        sorted = filtered.sort((a: any, b: any) => {
+          const aDate = a.imagens?.[0]?.createdAt
+            ? new Date(a.imagens[0].createdAt).getTime()
+            : new Date(a.createdAt).getTime();
+          const bDate = b.imagens?.[0]?.createdAt
+            ? new Date(b.imagens[0].createdAt).getTime()
+            : new Date(b.createdAt).getTime();
+          return ordem === 'recente' ? bDate - aDate : aDate - bDate;
+        });
+      } else {
+        if (ordem === 'nome_asc') sorted = filtered.sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        else if (ordem === 'nome_desc') sorted = filtered.sort((a: any, b: any) => b.nome.localeCompare(a.nome, 'pt-BR'));
+        else if (ordem === 'preco_asc') sorted = filtered.sort((a: any, b: any) => a.preco - b.preco);
+        else if (ordem === 'preco_desc') sorted = filtered.sort((a: any, b: any) => b.preco - a.preco);
+      }
+
+      const total = sorted.length;
+      const paginatedCodes = sorted.slice((page - 1) * limit, page * limit).map((p: any) => p.codigo);
+
+      // Fetch full data only for the paginated codes
+      const produtos = await prisma.catProduto.findMany({
+        where: { codigo: { in: paginatedCodes } },
+        include: {
+          departamento: true,
+          categoria: true,
+          imagens: { orderBy: [{ principal: 'desc' }, { ordem: 'asc' }] },
+        },
+      });
+
+      // Preserve order from paginatedCodes
+      const byCode = new Map(produtos.map((p: any) => [p.codigo, p]));
+      const ordered = paginatedCodes.map((c: string) => byCode.get(c)).filter(Boolean);
+
+      return NextResponse.json({
+        produtos: ordered,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
       });
     }
+
+    // FAST PATH: no special filters — use DB-level pagination (SQL OFFSET/LIMIT)
+    let orderBy: any = { nome: 'asc' };
+    if (ordem === 'nome_desc') orderBy = { nome: 'desc' };
+    else if (ordem === 'preco_asc') orderBy = { preco: 'asc' };
+    else if (ordem === 'preco_desc') orderBy = { preco: 'desc' };
+
+    const [total, produtos] = await Promise.all([
+      prisma.catProduto.count({ where }),
+      prisma.catProduto.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          departamento: true,
+          categoria: true,
+          imagens: { orderBy: [{ principal: 'desc' }, { ordem: 'asc' }] },
+        },
+      }),
+    ]);
 
     return NextResponse.json({
-      produtos: filtered,
+      produtos,
       total,
       page,
       totalPages: Math.ceil(total / limit),

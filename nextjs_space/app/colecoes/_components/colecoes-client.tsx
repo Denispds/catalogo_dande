@@ -8,6 +8,7 @@ import ShareModal from '@/components/share-modal';
 import WhatsAppCollectionShare from '@/components/whatsapp-collection-share';
 import ImageLightbox from '@/components/image-lightbox';
 import Image from 'next/image';
+import { getOptimizedImageUrl } from '@/lib/image-url';
 import Link from 'next/link';
 import {
   Loader2, FolderOpen, MessageCircle, Download, Plus, Pencil, Trash2, X,
@@ -439,7 +440,8 @@ export default function ColecoesClient() {
           return (
             <div key={i} className="w-9 h-9 rounded-lg overflow-hidden bg-pink-50 dark:bg-neutral-900 flex-shrink-0 relative">
               {url ? (
-                <Image src={url} alt="" fill className="object-cover" unoptimized />
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={getOptimizedImageUrl(url, 72, 72)} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xs">💎</div>
               )}
@@ -761,7 +763,8 @@ export default function ColecoesClient() {
                   </div>
                   {crudForm.imagemCapa && (
                     <div className="mt-2 relative w-full h-24 rounded-xl overflow-hidden">
-                      <Image src={crudForm.imagemCapa} alt="Preview" fill className="object-cover" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={crudForm.imagemCapa} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
@@ -869,11 +872,13 @@ export default function ColecoesClient() {
                       <div key={p?.codigo} className="bg-muted/50 rounded-lg overflow-hidden aspect-video">
                         {p?.imagens?.[0]?.url ? (
                           <div className="relative w-full h-full">
-                            <Image
-                              src={p.imagens[0].url}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={getOptimizedImageUrl(p.imagens[0].url, 320, 70)}
                               alt={p?.nome}
-                              fill
-                              className="object-cover"
+                              className="absolute inset-0 w-full h-full object-cover"
+                              loading="lazy"
+                              decoding="async"
                             />
                           </div>
                         ) : (
@@ -1176,7 +1181,8 @@ export default function ColecoesClient() {
                             )}
                             <div className="relative aspect-square bg-pink-50 dark:bg-neutral-900">
                               {p?.imagens?.[0]?.url ? (
-                                <Image src={p.imagens[0].url} alt={p?.nome ?? ''} fill className="object-cover" unoptimized />
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={getOptimizedImageUrl(p.imagens[0].url, 240, 72)} alt={p?.nome ?? ''} className="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-lg">💎</div>
                               )}
@@ -1228,9 +1234,10 @@ export default function ColecoesClient() {
                             </div>
 
                             {/* Image */}
-                            <div className="relative w-12 h-12 rounded flex-shrink-0 bg-pink-50 dark:bg-neutral-900">
+                            <div className="relative w-12 h-12 rounded flex-shrink-0 bg-pink-50 dark:bg-neutral-900 overflow-hidden">
                               {p?.imagens?.[0]?.url ? (
-                                <Image src={p.imagens[0].url} alt={p?.nome ?? ''} fill className="object-cover rounded" unoptimized />
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={getOptimizedImageUrl(p.imagens[0].url, 96, 70)} alt={p?.nome ?? ''} className="absolute inset-0 w-full h-full object-cover rounded" loading="lazy" decoding="async" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-sm">💎</div>
                               )}

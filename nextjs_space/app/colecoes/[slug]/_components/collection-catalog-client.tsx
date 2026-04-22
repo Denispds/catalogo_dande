@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
+import { getOptimizedImageUrl, getOptimizedSrcSet } from '@/lib/image-url';
 import Header from '@/components/header';
 import ProductCard from '@/components/product-card';
 import ShareModal from '@/components/share-modal';
@@ -276,12 +277,14 @@ export default function CollectionCatalogClient({ colecao }: Props) {
           {/* Collection cover image banner */}
           {colecao.imagemCapa && (
             <div className="relative w-full mb-4 rounded-2xl overflow-hidden shadow-md border border-border/50 h-40">
-              <Image
-                src={colecao.imagemCapa}
+              <img
+                src={getOptimizedImageUrl(colecao.imagemCapa, 1200, 80)}
+                srcSet={getOptimizedSrcSet(colecao.imagemCapa, [480, 768, 1024, 1280], 80)}
+                sizes="(max-width: 768px) 100vw, 1200px"
                 alt={colecao.nome}
-                fill
-                className="object-cover"
-                priority
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="eager"
+                decoding="async"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             </div>

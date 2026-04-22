@@ -9,6 +9,7 @@ import FilterPanel from '@/components/filter-panel';
 import ShareModal from '@/components/share-modal';
 import ImageLightbox from '@/components/image-lightbox';
 import { Search, ArrowUpDown, Loader2, Package, X, LayoutGrid, List, Square, CheckSquare, XCircle, FileText, Share2, CheckCheck, EyeOff, Eye, ChevronRight } from 'lucide-react';
+import { getOptimizedImageUrl } from '@/lib/image-url';
 
 const defaultFilters = { departamento: '', categoria: '', subcategoria: '', precoMin: '', precoMax: '', descontoMin: '' };
 const ordemOptions = [
@@ -393,9 +394,11 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo, cols)).join('\n')}
                   >
                     <div className="relative w-full h-24 bg-muted">
                       {firstImg ? (
-                        <img src={firstImg} alt={col?.nome} className="w-full h-full object-cover" />
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={getOptimizedImageUrl(firstImg, 288, 75)} alt={col?.nome} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                       ) : col?.imagemCapa ? (
-                        <img src={col.imagemCapa} alt={col?.nome} className="w-full h-full object-cover" />
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={getOptimizedImageUrl(col.imagemCapa, 288, 75)} alt={col?.nome} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${col?.cor}20, ${col?.cor}40)` }}>
                           <Package size={24} className="text-muted-foreground/40" />
@@ -617,7 +620,7 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo, cols)).join('\n')}
             layout === 'single' ? 'flex flex-col gap-3' :
             'grid grid-cols-2 gap-2.5'
           }>
-            {produtos?.map?.((p: any) => (
+            {produtos?.map?.((p: any, idx: number) => (
               <ProductCard
                 key={p?.codigo}
                 produto={p}
@@ -629,6 +632,7 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo, cols)).join('\n')}
                 selected={selectedCodes.has(p?.codigo)}
                 onSelect={toggleSelect}
                 onImageTap={handleImageTap}
+                priority={idx < 4}
               />
             ))}
           </div>

@@ -2,7 +2,8 @@
 
 import React, { useState, useRef } from 'react';
 import { Share2, Check, Play, ChevronLeft, ChevronRight } from 'lucide-react';
-import Image from 'next/image';
+import OptimizedImage from '@/components/optimized-image';
+import { getOptimizedImageUrl } from '@/lib/image-url';
 
 interface MediaItem {
   url: string;
@@ -20,6 +21,7 @@ interface ProductCardProps {
   onSelect?: (produto: any) => void;
   selectionMode?: boolean;
   onImageTap?: (produto: any, imageIndex: number) => void;
+  priority?: boolean;
 }
 
 function shortName(nome: string | undefined | null): string {
@@ -38,6 +40,7 @@ export default function ProductCard({
   onSelect,
   selectionMode = false,
   onImageTap,
+  priority = false,
 }: ProductCardProps) {
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -190,16 +193,18 @@ export default function ProductCard({
       >
         {displayUrl && !imgError ? (
           <>
-            <Image
+            <OptimizedImage
               src={displayUrl}
               alt={produto?.nome ?? 'Produto Dande'}
-              fill
-              className={`${objectFit} transition-all duration-500 ease-out group-hover:scale-105 ${
+              className={`absolute inset-0 w-full h-full ${objectFit} transition-all duration-500 ease-out group-hover:scale-105 ${
                 imgLoaded ? 'opacity-100' : 'opacity-0'
               }`}
+              width={640}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              srcSetWidths={[240, 360, 480, 640]}
+              priority={priority}
               onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}
-              unoptimized
             />
             {!imgLoaded && (
               <div className="absolute inset-0 flex items-center justify-center">
@@ -255,7 +260,17 @@ export default function ProductCard({
           {isVideo ? (
             <video src={current?.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
           ) : displayUrl && !imgError ? (
-            <Image src={displayUrl} alt={produto?.nome ?? 'Produto'} fill className="object-cover" onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} unoptimized />
+            <OptimizedImage
+              src={displayUrl}
+              alt={produto?.nome ?? 'Produto'}
+              className="absolute inset-0 w-full h-full object-cover"
+              width={192}
+              sizes="96px"
+              srcSetWidths={[96, 144, 192]}
+              priority={priority}
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setImgError(true)}
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center"><span className="text-lg">💎</span></div>
           )}

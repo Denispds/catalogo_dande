@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Image from 'next/image';
 import { X, ChevronLeft, ChevronRight, Play, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getOptimizedImageUrl } from '@/lib/image-url';
 
 interface MediaItem {
   url: string;
@@ -162,10 +162,13 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
                 ) : (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={current?.url ?? ''}
+                    src={getOptimizedImageUrl(current?.url, 1200, 88)}
+                    srcSet={current?.url ? `${getOptimizedImageUrl(current.url, 640, 85)} 640w, ${getOptimizedImageUrl(current.url, 960, 86)} 960w, ${getOptimizedImageUrl(current.url, 1200, 88)} 1200w, ${getOptimizedImageUrl(current.url, 1600, 88)} 1600w` : undefined}
+                    sizes="100vw"
                     alt={produto?.nome || 'Produto Dande'}
                     className="max-w-full max-h-full object-contain rounded-2xl"
                     draggable={false}
+                    decoding="async"
                   />
                 )}
               </motion.div>
@@ -213,12 +216,13 @@ export default function ImageLightbox({ images, initialIndex = 0, isOpen, onClos
                         <Play size={16} className="text-white" fill="white" />
                       </div>
                     ) : (
-                      <Image
-                        src={item?.thumbnailUrl || item?.url}
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={getOptimizedImageUrl(item?.thumbnailUrl || item?.url, 128, 70)}
                         alt={`Imagem ${i + 1}`}
-                        fill
-                        className="object-cover"
-                        unoptimized
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     )}
                   </button>
