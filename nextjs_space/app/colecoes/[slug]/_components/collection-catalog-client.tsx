@@ -11,7 +11,7 @@ import WhatsAppCollectionShare from '@/components/whatsapp-collection-share';
 import {
   Search, ArrowUpDown, Loader2, Package, X, LayoutGrid, List, Square,
   CheckSquare, XCircle, FileText, Share2, CheckCheck, EyeOff, Eye,
-  ChevronLeft, MessageCircle, Link as LinkIcon, Check, Copy
+  ChevronLeft, MessageCircle, Link as LinkIcon, Check, Copy, Tag
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -57,7 +57,7 @@ export default function CollectionCatalogClient({ colecao }: Props) {
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 30;
 
   // Share & lightbox state
   const [shareProduct, setShareProduct] = useState<any>(null);
@@ -348,17 +348,21 @@ export default function CollectionCatalogClient({ colecao }: Props) {
           )}
         </div>
 
-        {/* Simple inline filters */}
+        {/* Inline filters */}
         {(() => {
           const depts = [...new Set(allProdutos.map((p: any) => p?.departamento).filter(Boolean))];
-          const cats = [...new Set(allProdutos.map((p: any) => p?.categoria).filter(Boolean))];
-          const hasFilters = depts.length > 0 || cats.length > 0;
+          const allCats = [...new Set(allProdutos.map((p: any) => p?.categoria).filter(Boolean))];
+          // Categories filtered by selected department
+          const cats = filters.departamento
+            ? allCats.filter((c: any) => allProdutos.some((p: any) => p?.categoria?.id === c?.id && p?.departamento?.id === filters.departamento))
+            : allCats;
+          const hasFilters = depts.length > 0 || allCats.length > 0;
           return hasFilters ? (
             <div className="mb-3 p-3 rounded-2xl bg-muted/30 border border-border/30 space-y-2">
               {depts.length > 0 && (
                 <select
                   value={filters.departamento ?? ''}
-                  onChange={(e) => setFilters({ ...filters, departamento: e.target.value || undefined })}
+                  onChange={(e) => setFilters({ ...filters, departamento: e.target.value || undefined, categoria: undefined })}
                   className="w-full text-[11px] px-2 py-1.5 rounded-lg bg-card border border-border/50 outline-none focus:border-primary/50"
                 >
                   <option value="">Todos os departamentos</option>
@@ -373,7 +377,9 @@ export default function CollectionCatalogClient({ colecao }: Props) {
                   onChange={(e) => setFilters({ ...filters, categoria: e.target.value || undefined })}
                   className="w-full text-[11px] px-2 py-1.5 rounded-lg bg-card border border-border/50 outline-none focus:border-primary/50"
                 >
-                  <option value="">Todas as categorias</option>
+                  <option value="">
+                    {filters.departamento ? 'Filtrar categoria...' : 'Todas as categorias'}
+                  </option>
                   {cats.map((c: any) => (
                     <option key={c?.id} value={c?.id}>{c?.nome}</option>
                   ))}
@@ -589,6 +595,45 @@ export default function CollectionCatalogClient({ colecao }: Props) {
                 </div>
               )}
             </>
+          );
+        })()}
+
+        {/* Footer categories navigation */}
+        {(() => {
+          const cats = [...new Set(allProdutos.map((p: any) => p?.categoria).filter(Boolean))];
+          if (cats.length === 0) return null;
+          return (
+            <div className="mt-10 mb-6 pt-6 border-t border-border/30">
+              <div className="flex items-center gap-2 mb-3">
+                <Tag size={14} className="text-primary" />
+                <h3 className="text-sm font-bold">Categorias desta coleção</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {cats.map((c: any) => {
+                  const isActive = filters.categoria === c?.id;
+                  return (
+                    <button
+                      key={c?.id}
+                      onClick={() => {
+                        if (isActive) {
+                          setFilters({ ...filters, categoria: undefined });
+                        } else {
+                          setFilters({ ...filters, categoria: c?.id });
+                        }
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-[11px] font-medium transition-all active:scale-95 ${
+                        isActive
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-card border border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                      }`}
+                    >
+                      {c?.nome}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           );
         })()}
       </main>
