@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const body = await request.json();
-    const { nome, descricao, cor, ativa, imagemCapa } = body ?? {};
+    const { nome, descricao, cor, ativa, imagemCapa, destaque } = body ?? {};
     const data: any = {};
     if (nome !== undefined) {
       data.nome = nome;
@@ -48,6 +48,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (cor !== undefined) data.cor = cor;
     if (ativa !== undefined) data.ativa = ativa;
     if (imagemCapa !== undefined) data.imagemCapa = imagemCapa;
+    if (destaque !== undefined) data.destaque = destaque;
     const colecao = await prisma.catColecao.update({ where: { id: params?.id }, data });
     return NextResponse.json(colecao);
   } catch (error: any) {

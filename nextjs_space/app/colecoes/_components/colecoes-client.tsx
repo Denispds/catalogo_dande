@@ -123,7 +123,7 @@ export default function ColecoesClient() {
   // CRUD modal
   const [crudModal, setCrudModal] = useState<'create' | 'edit' | null>(null);
   const [editingCol, setEditingCol] = useState<any>(null);
-  const [crudForm, setCrudForm] = useState({ nome: '', descricao: '', cor: '#E91E8C' });
+  const [crudForm, setCrudForm] = useState({ nome: '', descricao: '', cor: '#E91E8C', imagemCapa: '', destaque: false });
   const [crudLoading, setCrudLoading] = useState(false);
 
   // Delete confirm
@@ -251,7 +251,7 @@ export default function ColecoesClient() {
       if (res.ok) {
         toast.success('Coleção criada!');
         setCrudModal(null);
-        setCrudForm({ nome: '', descricao: '', cor: '#E91E8C' });
+        setCrudForm({ nome: '', descricao: '', cor: '#E91E8C', imagemCapa: '', destaque: false });
         await fetchColecoes();
       } else {
         toast.error('Erro ao criar coleção');
@@ -489,7 +489,7 @@ export default function ColecoesClient() {
           </div>
           {isAdmin && (
             <button
-              onClick={() => { setCrudForm({ nome: '', descricao: '', cor: '#E91E8C' }); setCrudModal('create'); }}
+              onClick={() => { setCrudForm({ nome: '', descricao: '', cor: '#E91E8C', imagemCapa: '', destaque: false }); setCrudModal('create'); }}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-primary text-white text-sm font-semibold shadow-lg shadow-primary/30 active:scale-95 transition-all"
             >
               <Plus size={16} /> Nova
@@ -523,6 +523,11 @@ export default function ColecoesClient() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-bold text-sm truncate">{col?.nome ?? ''}</p>
+                        {col?.destaque && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-gold/80 to-gold text-white flex-shrink-0">
+                            ⭐ Destaque
+                          </span>
+                        )}
                         <span className="flex items-center gap-1 text-[10px] font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full flex-shrink-0 whitespace-nowrap">
                           <Package size={12} />
                           {prods.length}
@@ -551,7 +556,7 @@ export default function ColecoesClient() {
                           <button
                             onClick={() => {
                               setEditingCol(col);
-                              setCrudForm({ nome: col?.nome ?? '', descricao: col?.descricao ?? '', cor: col?.cor ?? '#E91E8C' });
+                              setCrudForm({ nome: col?.nome ?? '', descricao: col?.descricao ?? '', cor: col?.cor ?? '#E91E8C', imagemCapa: col?.imagemCapa ?? '', destaque: col?.destaque ?? false });
                               setCrudModal('edit');
                             }}
                             className="w-8 h-8 rounded-xl bg-muted/50 flex items-center justify-center active:scale-90 transition-all"
@@ -740,6 +745,39 @@ export default function ColecoesClient() {
                       ))}
                     </div>
                   </div>
+                </div>
+
+                {/* Imagem de Capa */}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Imagem de Capa (URL)</label>
+                  <div className="flex items-center gap-2">
+                    <ImageIcon size={16} className="text-muted-foreground flex-shrink-0" />
+                    <input
+                      value={crudForm.imagemCapa}
+                      onChange={(e) => setCrudForm(prev => ({ ...prev, imagemCapa: e.target.value }))}
+                      placeholder="https://i.ytimg.com/vi/WzDmoTydaEk/maxresdefault.jpg"
+                      className="flex-1 px-3 py-2.5 rounded-xl bg-muted/50 text-sm focus:ring-2 focus:ring-primary/30 border-0 outline-none transition-all"
+                    />
+                  </div>
+                  {crudForm.imagemCapa && (
+                    <div className="mt-2 relative w-full h-24 rounded-xl overflow-hidden">
+                      <Image src={crudForm.imagemCapa} alt="Preview" fill className="object-cover" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Destaque toggle */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                  <div>
+                    <label className="text-sm font-semibold block">Coleção em Destaque</label>
+                    <p className="text-[11px] text-muted-foreground">Aparece no carrossel da Home</p>
+                  </div>
+                  <button
+                    onClick={() => setCrudForm(prev => ({ ...prev, destaque: !prev.destaque }))}
+                    className={`w-12 h-7 rounded-full transition-all relative ${crudForm.destaque ? 'bg-primary' : 'bg-muted'}`}
+                  >
+                    <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${crudForm.destaque ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  </button>
                 </div>
               </div>
 

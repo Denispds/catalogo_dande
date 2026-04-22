@@ -108,8 +108,10 @@ model CatColecao {
   descricao String?
   cor       String   @default("#E91E8C")
   imagemCapa String?  @map("imagem_capa")
+  destaque  Boolean  @default(false)
   ativa     Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
   produtos  CatColecaoProduto[]
 
   @@map("cat_colecoes")

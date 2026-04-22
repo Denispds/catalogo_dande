@@ -12,14 +12,27 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const colecao = await prisma.catColecao.findFirst({
     where: { slug: params.slug, ativa: true },
+    include: { produtos: true },
   });
   if (!colecao) return { title: 'Coleção não encontrada' };
+  
+  const prodCount = colecao.produtos?.length ?? 0;
+  const ogImage = colecao.imagemCapa || undefined;
+  
   return {
     title: `${colecao.nome} - Dande Acessórios`,
-    description: colecao.descricao || `Confira nossa coleção ${colecao.nome}`,
+    description: colecao.descricao || `Confira nossa coleção ${colecao.nome} com ${prodCount} produtos exclusivos. Atacado de acessórios femininos.`,
     openGraph: {
       title: `Coleção: ${colecao.nome}`,
+      description: colecao.descricao || `Coleção exclusiva Dande Acessórios - ${prodCount} produtos`,
+      images: ogImage ? [{ url: ogImage, alt: colecao.nome }] : undefined,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Coleção: ${colecao.nome}`,
       description: colecao.descricao || `Coleção exclusiva Dande Acessórios`,
+      images: ogImage ? [ogImage] : undefined,
     },
   };
 }

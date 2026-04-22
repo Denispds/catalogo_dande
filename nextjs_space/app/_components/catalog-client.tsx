@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import Header from '@/components/header';
 import ProductCard from '@/components/product-card';
 import FilterPanel from '@/components/filter-panel';
 import ShareModal from '@/components/share-modal';
 import ImageLightbox from '@/components/image-lightbox';
-import { Search, ArrowUpDown, Loader2, Package, X, LayoutGrid, List, Square, CheckSquare, XCircle, FileText, Share2, CheckCheck, EyeOff, Eye } from 'lucide-react';
+import { Search, ArrowUpDown, Loader2, Package, X, LayoutGrid, List, Square, CheckSquare, XCircle, FileText, Share2, CheckCheck, EyeOff, Eye, ChevronRight } from 'lucide-react';
 
 const defaultFilters = { departamento: '', categoria: '', subcategoria: '', precoMin: '', precoMax: '', descontoMin: '' };
 const ordemOptions = [
@@ -54,6 +55,10 @@ export default function CatalogClient() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxProduto, setLightboxProduto] = useState<any>(null);
+  
+  // Featured collections carousel
+  const [featuredCollections, setFeaturedCollections] = useState<any[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
 
   const handleImageTap = (produto: any, imageIndex: number) => {
     const imgs = produto?.imagens ?? [];
@@ -174,6 +179,20 @@ export default function CatalogClient() {
       setDepartamentos(deps ?? []);
       setCategorias(cats ?? []);
     });
+  }, []);
+  
+  // Carregar coleções em destaque
+  useEffect(() => {
+    fetch('/api/colecoes?destaque=true')
+      .then((r) => r.json())
+      .then((data) => {
+        setFeaturedCollections(Array.isArray(data) ? data : []);
+        setFeaturedLoading(false);
+      })
+      .catch(() => {
+        setFeaturedCollections([]);
+        setFeaturedLoading(false);
+      });
   }, []);
 
   // Intersection Observer para scroll infinito
@@ -350,6 +369,48 @@ ${selected.map((p: any) => buildCardHtml(p, showInfo, cols)).join('\n')}
             >
               Ver tudo
             </button>
+          </div>
+        )}
+
+        {/* Featured Collections Carousel */}
+        {featuredCollections.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-bold">Coleções em Destaque</h2>
+              <Link href="/colecoes" className="text-[11px] text-primary font-medium flex items-center gap-0.5">
+                Ver todas <ChevronRight size={12} />
+              </Link>
+            </div>
+            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
+              {featuredCollections.map((col: any) => {
+                const prodCount = col?.produtos?.length ?? 0;
+                const firstImg = col?.produtos?.[0]?.produto?.imagens?.[0]?.url;
+                return (
+                  <Link
+                    key={col?.id}
+                    href={`/colecoes/${col?.slug}`}
+                    className="flex-shrink-0 w-36 rounded-2xl overflow-hidden border border-border/30 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all"
+                  >
+                    <div className="relative w-full h-24 bg-muted">
+                      {firstImg ? (
+                        <img src={firstImg} alt={col?.nome} className="w-full h-full object-cover" />
+                      ) : col?.imagemCapa ? (
+                        <img src={col.imagemCapa} alt={col?.nome} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${col?.cor}20, ${col?.cor}40)` }}>
+                          <Package size={24} className="text-muted-foreground/40" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                      <div className="absolute bottom-1.5 left-2 right-2">
+                        <p className="text-[11px] font-bold text-white truncate">{col?.nome}</p>
+                        <p className="text-[9px] text-white/70">{prodCount} produto{prodCount !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
 
